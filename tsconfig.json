@@ -1,0 +1,9 @@
+{
+  "extends": "./.instatic/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true
+  },
+  "include": ["instatic-plugin.config.ts", "server/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["node_modules", "dist", "artifacts"]
+}
