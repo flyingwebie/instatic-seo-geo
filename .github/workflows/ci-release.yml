@@ -1,0 +1,153 @@
+name: Validate and release alpha
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Superseded PR builds can stop; each distinct main commit keeps its own run.
+concurrency:
+  group: alpha-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  BUN_VERSION: 1.4.2
+  INSTATIC_REF: f4e692f70d012be82e47c3dce5cf23aec4d573bc
+
+jobs:
+  validate:
+    name: Validate and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: Instatic-plugins/seo-geo
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: Instatic-plugins/seo-geo
+          persist-credentials: false
+
+      - name: Check out pinned Instatic SDK
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: flyingwebie/Instatic
+          ref: ${{ env.INSTATIC_REF }}
+          path: Instatic
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install archive tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zip unzip
+
+      - name: Install host dependencies
+        working-directory: Instatic
+        run: bun install --frozen-lockfile
+
+      - name: Install plugin dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Prepare alpha version
+        id: version
+        run: |
+          release_version="$(bun run scripts/release-version.ts "$GITHUB_RUN_NUMBER" "$GITHUB_SHA")"
+          printf 'version=%s\n' "$release_version" >> "$GITHUB_OUTPUT"
+          printf 'tag=v%s\n' "$release_version" >> "$GITHUB_OUTPUT"
+          printf 'INSTATIC_PLUGIN_VERSION=%s\n' "$release_version" >> "$GITHUB_ENV"
+
+      - name: Lint plugin
+        run: bun run lint
+
+      - name: Test release identity
+        run: bun run test
+
+      - name: Typecheck and build plugin ZIP
+        run: bun run build
+
+      - name: Verify archive and record build inputs
+        run: |
+          unzip -t artifacts/seo-geo.plugin.zip
+          bun --eval 'await Bun.write("artifacts/build-info.json", JSON.stringify({ unofficial: true, channel: "alpha", version: process.env.INSTATIC_PLUGIN_VERSION, pluginCommit: process.env.GITHUB_SHA, instaticCommit: process.env.INSTATIC_REF, bunVersion: Bun.version }, null, 2) + "\n")'
+          cd artifacts
+          sha256sum seo-geo.plugin.zip build-info.json > SHA256SUMS
+
+      - name: Upload alpha build artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: seo-geo-${{ steps.version.outputs.version }}
+          path: Instatic-plugins/seo-geo/artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish unofficial alpha prerelease
+    needs: validate
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+      RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+    steps:
+      - name: Download validated package
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: seo-geo-${{ needs.validate.outputs.version }}
+          path: artifacts
+
+      - name: Verify downloaded files
+        working-directory: artifacts
+        run: sha256sum --check SHA256SUMS
+
+      - name: Write alpha release notes
+        run: |
+          cat > release-notes.md <<EOF
+          ## Unofficial alpha-test build
+
+          **This plugin is NOT official and is still in alpha testing.**
+          Features may be incomplete; consult the README for current implementation status.
+
+          - Plugin version: \`$RELEASE_VERSION\`
+          - Source commit: \`$GITHUB_SHA\`
+          - Instatic SDK commit: \`$INSTATIC_REF\`
+          - Bun: \`$BUN_VERSION\`
+          - [Workflow run](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+          - [README](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/README.md)
+
+          Download \`seo-geo.plugin.zip\` for installation through Admin → Plugins.
+          \`SHA256SUMS\` verifies the package and \`build-info.json\` records its build inputs.
+          EOF
+
+      - name: Publish prerelease
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            printf 'Prerelease %s is already published; preserving its assets.\n' "$RELEASE_TAG"
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" \
+            artifacts/seo-geo.plugin.zip artifacts/SHA256SUMS artifacts/build-info.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Unofficial alpha $RELEASE_VERSION" \
+            --prerelease --latest=false \
+            --notes-file release-notes.md

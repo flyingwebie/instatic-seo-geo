@@ -1,9 +1,9 @@
 {
   "name": "@instatic-plugins/seo-geo",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.0",
   "private": true,
   "type": "module",
-  "description": "Instatic plugin for published-content Markdown, sitemaps, SEO, and Schema.org.",
+  "description": "Unofficial alpha-test Instatic plugin for published-content Markdown, sitemaps, SEO, and Schema.org.",
   "homepage": "https://github.com/flyingwebie/instatic-seo-geo#readme",
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
     "setup": "bun run scripts/plugin.ts setup",
     "lint": "bun run scripts/plugin.ts lint",
     "typecheck": "bun run scripts/plugin.ts typecheck",
+    "test": "bun test",
     "build": "bun run scripts/plugin.ts build",
     "dev": "bun run scripts/plugin.ts dev"
   },

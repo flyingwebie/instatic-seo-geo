@@ -2,6 +2,12 @@
 
 Build an installable Instatic plugin that improves technical search readiness and derives Markdown, discovery files, and structured data from published content.
 
+> **Unofficial alpha testing:** this is an independent plugin, not an official Instatic release. The current implementation is a scaffold; the content features below are planned.
+
+## Distribution foundation
+
+GitHub Actions validates pull requests and produces downloadable plugin ZIP artifacts. Successful updates to `main` publish unofficial alpha prereleases with matching tag/manifest versions, checksums, and build information. Automated publication describes a tested build, not completion of the product milestones below. See the [release process](../README.md#automated-builds-and-alpha-releases).
+
 ## First milestone
 
 Publish one ordinary page and one templated article. Generate matching Markdown, canonical URLs, sitemap entries, and Article JSON-LD. Confirm unpublished page/component/layout edits stay private and unpublishing retracts generated public content.

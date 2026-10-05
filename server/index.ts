@@ -5,6 +5,8 @@ const plugin: ServerPluginModule = {
     api.cms.routes.get('/status', 'plugins.read', () => ({
       pluginId: api.plugin.id,
       version: api.plugin.version,
+      official: false,
+      channel: 'alpha',
       stage: 'scaffold',
       features: {
         markdown: false,

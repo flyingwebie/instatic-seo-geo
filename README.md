@@ -5,7 +5,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-development_scaffold-f59e0b" alt="Status: development scaffold" />
+  <img src="https://img.shields.io/badge/Instatic-UNOFFICIAL-64748b" alt="Unofficial Instatic plugin" />
+  <img src="https://img.shields.io/badge/status-ALPHA_TEST-f59e0b" alt="Status: alpha testing" />
   <img src="https://img.shields.io/badge/Bun-1.4.x-14151a" alt="Bun 1.4.x" />
   <img src="https://img.shields.io/badge/TypeScript-strict-3178c6" alt="Strict TypeScript" />
   <img src="https://img.shields.io/badge/Instatic-plugin_API_1-6366f1" alt="Instatic plugin API 1" />
@@ -16,6 +17,8 @@
   <a href="#features-and-status">Features</a> ·
   <a href="docs/roadmap.md">Roadmap</a> ·
   <a href="docs/research.md">Research</a> ·
+  <a href="https://github.com/flyingwebie/instatic-seo-geo/releases">Alpha releases</a> ·
+  <a href="https://github.com/flyingwebie/instatic-seo-geo/actions">Builds</a> ·
   <a href="https://github.com/flyingwebie/instatic-seo-geo/issues">Issues</a>
 </p>
 
@@ -26,7 +29,9 @@ An independently developed plugin for [Instatic](https://github.com/flyingwebie/
 The intended workflow is straightforward: publish your website, then generate accurate metadata, structured data, Markdown, and discovery files from the same published content.
 
 > [!IMPORTANT]
-> **This project is at the scaffold stage.** You can build a plugin ZIP and activate its authenticated status endpoint. Markdown exports, sitemaps, SEO enrichment, and Schema.org generation are planned and are not implemented in version `0.1.0`. No functional SEO release has been published.
+> **This plugin is NOT official and is still in alpha testing.** It is independently maintained and is not an official Instatic product or release.
+>
+> **The current implementation is a development scaffold.** You can build a plugin ZIP and activate its authenticated status endpoint. Markdown exports, sitemaps, SEO enrichment, and Schema.org generation are planned and are not implemented in the `0.1.0-alpha.*` builds. An automatically published alpha package does not mean those features are complete.
 
 ## Why this project exists
 
@@ -48,6 +53,7 @@ These are product goals. A plugin can improve technical readiness; it cannot gua
 | Standalone project | Bun tooling, strict TypeScript, ESLint, and local SDK setup | ✅ Available |
 | ZIP packaging | Host CLI produces a manifest and a self-contained server bundle | ✅ Available |
 | Sandbox entrypoint | QuickJS activation and a `plugins.read`-gated status endpoint | ✅ Available |
+| Release automation | PR validation and ZIP artifacts; alpha prereleases after successful updates to `main` | ✅ Configured |
 | Markdown publishing | Published pages, articles, and explicitly permitted collection entries | 📋 Planned |
 | XML sitemaps | Canonical HTML routes, meaningful modification dates, partitioning | 📋 Planned |
 | SEO metadata | Titles, descriptions, canonical/robots controls, and social previews | 📋 Planned |
@@ -70,6 +76,8 @@ See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependenc
 
 The SDK is currently part of the Instatic source tree, rather than a published standalone npm package. A local host checkout is needed for development and builds; the generated ZIP does not depend on your checkout path.
 
+For a prebuilt ZIP, open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download `seo-geo.plugin.zip` from a prerelease, then follow the local installation steps below. Releases include checksums and build information. These packages are for alpha testing; consult the feature table before installing.
+
 ### 1. Prepare the host and plugin
 
 The default directory layout is:
@@ -86,6 +94,7 @@ From your workspace directory:
 ```sh
 git clone https://github.com/flyingwebie/Instatic.git Instatic
 cd Instatic
+git checkout f4e692f70d012be82e47c3dce5cf23aec4d573bc
 bun install --frozen-lockfile
 cd ..
 
@@ -97,11 +106,14 @@ bun install --frozen-lockfile
 
 If you already have the host checkout, reuse it and configure its location as described below.
 
+The host revision above matches CI's pinned SDK. Later host revisions may change the plugin API; update and validate the pin deliberately when adopting SDK changes.
+
 ### 2. Connect, validate, and build
 
 ```sh
 bun run setup
 bun run lint
+bun run test
 bun run build
 ```
 
@@ -127,7 +139,9 @@ The current response explicitly identifies the scaffold:
 ```json
 {
   "pluginId": "instatic.seo-geo",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.0",
+  "official": false,
+  "channel": "alpha",
   "stage": "scaffold",
   "features": {
     "markdown": false,
@@ -144,10 +158,11 @@ The current response explicitly identifies the scaffold:
 | `bun run setup` | Generate the local SDK connection and TypeScript configuration |
 | `bun run typecheck` | Check the project with TypeScript |
 | `bun run lint` | Run ESLint and the host's plugin manifest/source/bundle validation |
+| `bun run test` | Check release version identity and reject malformed build inputs |
 | `bun run build` | Typecheck, bundle through the host SDK, and produce the plugin ZIP |
 | `bun run dev` | Watch source files and sync builds to the local host's uploads directory |
 
-Every command refreshes the SDK connection. Run `setup` after cloning or changing host locations so your editor can resolve the generated TypeScript configuration.
+SDK commands refresh the local connection. Run `setup` after cloning or changing host locations so your editor can resolve the generated TypeScript configuration. The release version tests run independently of the host checkout.
 
 ### Configuration
 
@@ -155,6 +170,7 @@ Every command refreshes the SDK connection. Run `setup` after cloning or changin
 | --- | --- | --- |
 | `INSTATIC_DIR` | `../../Instatic`, relative to this project | Select the local host checkout used by the SDK and build CLI |
 | `INSTATIC_UPLOADS_DIR` | `<INSTATIC_DIR>/uploads` | Select the local upload directory used by `dev` |
+| `INSTATIC_PLUGIN_VERSION` | Version from `package.json` | Override the built manifest version; CI supplies a unique alpha version |
 
 For a different checkout location:
 
@@ -175,6 +191,36 @@ Set these variables in your shell or local Bun environment configuration. Enviro
 
 `dev` writes generated files into the selected local host directory. First installation and permission approval still happen through Admin → Plugins; subsequent builds are picked up on the host's next activation cycle. Build and lint do not install the plugin.
 
+### Automated builds and alpha releases
+
+The [GitHub Actions workflow](.github/workflows/ci-release.yml) runs on pull requests targeting `main`, every update to `main` (including documentation changes), and manual dispatch.
+
+| Trigger | Result after validation passes |
+| --- | --- |
+| Pull request | Downloadable ZIP build artifact, retained for 14 days |
+| Update to `main` | New GitHub **prerelease** with the validated plugin ZIP |
+| Manual run on `main` | New alpha prerelease for that commit |
+| Manual run on another branch | Build artifact for testing |
+
+Each run installs locked dependencies, uses Bun `1.4.2` and a pinned Instatic SDK revision, runs lint and release-version tests, typechecks and builds the actual plugin ZIP, and verifies the archive. Failed validation prevents publication. Third-party Actions are pinned to commit SHAs.
+
+Release versions use the package's base version, the workflow run number, and the commit's short SHA. For example:
+
+```text
+Plugin version: 0.1.0-alpha.42.gabcdef0
+Git tag:        v0.1.0-alpha.42.gabcdef0
+```
+
+The tag and ZIP manifest identify the same version. Re-running a completed workflow preserves an existing release and its assets; a new workflow run gets a new version. Alpha releases are labeled **unofficial**, marked as prereleases, and never promoted to GitHub's latest stable release.
+
+Every release contains:
+
+- `seo-geo.plugin.zip` — uploadable plugin package.
+- `SHA256SUMS` — checksums for the ZIP and build information.
+- `build-info.json` — plugin version, source commit, SDK commit, Bun version, and unofficial alpha status.
+
+Automation uses GitHub's built-in token; no custom release secret is required. Only the release job gets write access to repository contents. Update `INSTATIC_REF` in the workflow when deliberately adopting a new host SDK revision, and update the base version in `package.json` when advancing the plugin's release line.
+
 ### Troubleshooting
 
 | Symptom | Check |
@@ -189,11 +235,16 @@ Set these variables in your shell or local Bun environment configuration. Enviro
 
 ```text
 seo-geo/
+├── .github/workflows/
+│   └── ci-release.yml        # Validation, packaging, and alpha prereleases
 ├── instatic-plugin.config.ts  # Plugin identity and permission declarations
 ├── server/
 │   └── index.ts              # QuickJS server entrypoint
 ├── scripts/
-│   └── plugin.ts             # SDK setup, validation, build, and dev commands
+│   ├── plugin.ts             # SDK setup, validation, build, and dev commands
+│   └── release-version.ts    # Unique alpha version from run number and commit
+├── tests/
+│   └── release-version.test.ts
 ├── docs/
 │   ├── roadmap.md            # Implementation sequence and acceptance criteria
 │   └── research.md           # Dated primary-source search guidance
@@ -269,14 +320,14 @@ Before contributing:
 1. Read the [roadmap](docs/roadmap.md) and [research](docs/research.md).
 2. Open an [issue](https://github.com/flyingwebie/instatic-seo-geo/issues) for a proposal or bug report. Keep example content public or synthetic.
 3. Use a feature branch and a pull request with a clear problem statement and verification results.
-4. Run `bun run lint` and `bun run build`. Add meaningful tests as functional behavior is implemented.
+4. Run `bun run lint`, `bun run test`, and `bun run build`. Add meaningful tests as functional behavior is implemented.
 5. Keep host SDK changes in the Instatic repository and link the corresponding plugin work.
 
-There is no automated test suite yet. The scaffold has been checked with TypeScript, ESLint, SDK validation, ZIP integrity checks, and direct activation/route checks in the host's QuickJS VM, including rejection without the required permission.
+The automated tests cover release identity and malformed build inputs. The scaffold has also been checked with TypeScript, ESLint, SDK validation, ZIP integrity checks, and direct activation/route checks in the host's QuickJS VM, including rejection without the required permission. Functional SEO tests will accompany implementation of the planned features.
 
 ## License and relationship to Instatic
 
-A project license has not been selected yet. This repository is independently maintained and is not an official Instatic release.
+A project license has not been selected yet. **This plugin is NOT official and is still in alpha testing.** It is independently maintained and is not an official Instatic product or release.
 
 ---
 
