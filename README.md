@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick start</a> ·
+  <a href="#quick-start">Install</a> ·
   <a href="#features-and-status">Features</a> ·
   <a href="docs/roadmap.md">Roadmap</a> ·
   <a href="docs/research.md">Research</a> ·
@@ -68,17 +68,52 @@ See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependenc
 
 ## Quick start
 
-### Requirements
+**Download → upload → confirm.** Installation requires a compatible running Instatic instance and an account allowed to install plugins. The scaffold was verified against Instatic `0.0.21` and plugin API `1`.
+
+1. Open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download **`seo-geo.plugin.zip`** from a prerelease.
+2. In Instatic, open **Admin → Plugins** and upload that ZIP.
+3. Review and approve the requested `cms.routes` permission, then confirm installation. Instatic validates, installs, and activates the plugin.
+
+The ZIP contains the plugin manifest and bundled code. Bun, Git, and the SDK checkout are development tools used to build the package from source. Keep the ZIP intact when uploading it.
+
+**These packages are unofficial alpha builds.** Consult the feature table above: the current scaffold provides a status endpoint; the SEO and content-generation features are still planned. Use a local test instance for alpha testing.
+
+### Check the installation
+
+While signed in with the `plugins.read` capability, open:
+
+```text
+/admin/api/cms/plugins/instatic.seo-geo/runtime/status
+```
+
+The current response explicitly identifies the scaffold:
+
+```json
+{
+  "pluginId": "instatic.seo-geo",
+  "version": "0.1.0-alpha.0",
+  "official": false,
+  "channel": "alpha",
+  "stage": "scaffold",
+  "features": {
+    "markdown": false,
+    "sitemap": false,
+    "structuredData": false
+  }
+}
+```
+
+## Development
+
+### Build requirements
 
 - **Bun:** `>=1.4.0 <1.5.0`; development currently uses `1.4.2`.
-- **Instatic:** a local source checkout with its dependencies installed. The scaffold was verified against host version `0.0.21` and plugin API `1`.
+- **Instatic:** a local source checkout with its dependencies installed.
 - **Git** and the **`zip` command** on your development machine. The host packaging CLI uses `zip`.
 
 The SDK is currently part of the Instatic source tree, rather than a published standalone npm package. A local host checkout is needed for development and builds; the generated ZIP does not depend on your checkout path.
 
-For a prebuilt ZIP, open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download `seo-geo.plugin.zip` from a prerelease, then follow the local installation steps below. Releases include checksums and build information. These packages are for alpha testing; consult the feature table before installing.
-
-### 1. Prepare the host and plugin
+### Build from source
 
 The default directory layout is:
 
@@ -102,20 +137,14 @@ mkdir -p Instatic-plugins
 git clone https://github.com/flyingwebie/instatic-seo-geo.git Instatic-plugins/seo-geo
 cd Instatic-plugins/seo-geo
 bun install --frozen-lockfile
-```
 
-If you already have the host checkout, reuse it and configure its location as described below.
-
-The host revision above matches CI's pinned SDK. Later host revisions may change the plugin API; update and validate the pin deliberately when adopting SDK changes.
-
-### 2. Connect, validate, and build
-
-```sh
 bun run setup
 bun run lint
 bun run test
 bun run build
 ```
+
+If you already have the host checkout, reuse it and configure its location as described below. The host revision above matches CI's pinned SDK. Later host revisions may change the plugin API; update and validate the pin deliberately when adopting SDK changes.
 
 The uploadable package is created at:
 
@@ -123,35 +152,9 @@ The uploadable package is created at:
 artifacts/seo-geo.plugin.zip
 ```
 
-### 3. Install in a local Instatic instance
+Upload this file using the [installation steps](#quick-start) above. For local development, start your Instatic instance using the host's setup instructions.
 
-1. Start your local Instatic development instance using the host's setup instructions.
-2. Open **Admin → Plugins** and upload `artifacts/seo-geo.plugin.zip`.
-3. Approve the declared permission and activate the plugin.
-4. While signed in with the `plugins.read` capability, open:
-
-   ```text
-   /admin/api/cms/plugins/instatic.seo-geo/runtime/status
-   ```
-
-The current response explicitly identifies the scaffold:
-
-```json
-{
-  "pluginId": "instatic.seo-geo",
-  "version": "0.1.0-alpha.0",
-  "official": false,
-  "channel": "alpha",
-  "stage": "scaffold",
-  "features": {
-    "markdown": false,
-    "sitemap": false,
-    "structuredData": false
-  }
-}
-```
-
-## Development
+### Commands
 
 | Command | What it does |
 | --- | --- |

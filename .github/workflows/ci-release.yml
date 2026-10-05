@@ -134,7 +134,12 @@ jobs:
           - [Workflow run](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
           - [README](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/README.md)
 
-          Download \`seo-geo.plugin.zip\` for installation through Admin → Plugins.
+          ### Install the ZIP
+
+          1. Download \`seo-geo.plugin.zip\` from this release.
+          2. Open Instatic **Admin → Plugins** and upload the ZIP.
+          3. Review and approve the requested \`cms.routes\` permission, then confirm installation. Instatic installs and activates the plugin.
+
           \`SHA256SUMS\` verifies the package and \`build-info.json\` records its build inputs.
           EOF
 
