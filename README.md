@@ -222,25 +222,39 @@ Set these variables in your shell or local Bun environment configuration. Enviro
 
 ### Automated builds and alpha releases
 
-The [GitHub Actions workflow](.github/workflows/ci-release.yml) runs on pull requests (including stacked branches), every update to `main` (including documentation changes), and manual dispatch.
+The [GitHub Actions workflow](.github/workflows/ci-release.yml) runs on pull requests (including stacked branches), every update to `main` (including documentation changes), version tags beginning with `v`, and manual dispatch. Every new version is published as a GitHub release with its uploadable ZIP after validation passes.
 
-| Trigger                      | Result after validation passes                          |
-| ---------------------------- | ------------------------------------------------------- |
-| Pull request                 | Downloadable ZIP build artifact, retained for 14 days   |
-| Update to `main`             | New GitHub **prerelease** with the validated plugin ZIP |
-| Manual run on `main`         | New alpha prerelease for that commit                    |
-| Manual run on another branch | Build artifact for testing                              |
+| Trigger                            | Result after validation passes                                           |
+| ---------------------------------- | ------------------------------------------------------------------------ |
+| Pull request                       | Downloadable ZIP build artifact, retained for 14 days                    |
+| Update to `main`                   | New GitHub **prerelease** with the validated plugin ZIP                  |
+| Version tag, e.g. `v0.3.1-alpha.0` | GitHub prerelease for that exact version, with the matching ZIP manifest |
+| Manual run on `main`               | New alpha prerelease for that commit                                     |
+| Manual run on a version tag        | Publish or retry that exact version                                      |
+| Manual run on another branch       | Build artifact for testing                                               |
 
 Each run installs locked dependencies, uses Bun `1.4.2` and a pinned Instatic SDK revision, runs lint and behavioral/release-version tests, typechecks and builds the actual plugin ZIP, verifies its QuickJS activation and output contracts, and checks the archive. Failed validation prevents publication. Third-party Actions are pinned to commit SHAs.
 
-Release versions use the package's base version, the workflow run number, and the commit's short SHA. For example:
+Automatic `main` builds use the package's base version, the workflow run number, and the commit's short SHA. For example:
 
 ```text
 Plugin version: 0.3.0-alpha.42.gabcdef0
 Git tag:        v0.3.0-alpha.42.gabcdef0
 ```
 
-The tag and ZIP manifest identify the same version. Re-running a completed workflow preserves an existing release and its assets; a new workflow run gets a new version. Alpha releases are labeled **unofficial**, marked as prereleases, and never promoted to GitHub's latest stable release.
+To launch a named version, update `package.json` through a PR to an alpha version such as `0.3.1-alpha.0` and merge it. Tag the merged commit with that exact version:
+
+```bash
+git fetch origin main
+git tag v0.3.1-alpha.0 origin/main
+git push origin v0.3.1-alpha.0
+```
+
+The tag must exactly match `v` plus the package version and point to a commit already merged into `main`. The workflow builds the matching ZIP and publishes the release automatically. A failed check prevents publication and can be retried. The example version is illustrative; use the version declared in the merged commit's `package.json`.
+
+The tag and ZIP manifest identify the same version. Re-running a completed workflow preserves an existing release and its assets. A new `main` or manual branch run gets a new build version; a version-tag run always keeps the tag's exact version. Tags created by the workflow's built-in token do not recursively trigger another push workflow, as described in [GitHub's trigger documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow).
+
+Alpha releases are labeled **unofficial**, marked as prereleases, and never promoted to GitHub's latest stable release. Open [all plugin releases](https://github.com/flyingwebie/instatic-seo-geo/releases) to find their ZIP downloads; the repository sidebar and `/releases/latest` are not the alpha download list.
 
 Every release contains:
 
