@@ -3,13 +3,21 @@ import packageInfo from "./package.json";
 
 export default definePlugin({
   id: "instatic.seo-geo",
-  name: "SEO & GEO (Unofficial Alpha)",
+  name: "SEO, GEO & AIO (Unofficial Alpha)",
   version: process.env.INSTATIC_PLUGIN_VERSION || packageInfo.version,
   description:
-    "Unofficial alpha: published Markdown, sitemaps, SEO metadata, Schema.org, audits, redirects, and webmaster reports.",
+    "Unofficial alpha: published Markdown, sitemaps, guided SEO/GEO/AIO setup, Schema.org, audits, redirects, and webmaster reports.",
   homepage: "https://github.com/flyingwebie/instatic-seo-geo#readme",
   repository: "https://github.com/flyingwebie/instatic-seo-geo",
-  keywords: ["seo", "geo", "markdown", "sitemap", "schema"],
+  keywords: [
+    "seo",
+    "geo",
+    "aio",
+    "ai-overviews",
+    "markdown",
+    "sitemap",
+    "schema",
+  ],
   permissions: [
     permissions.cmsRoutes,
     permissions.cmsRoutesPublic,
@@ -57,10 +65,11 @@ export default definePlugin({
     },
     {
       id: "options",
-      label:
-        "Page metadata, profiles, collections, translations, and crawler policies (JSON)",
+      label: "Advanced configuration JSON (optional)",
       type: "textarea",
-      rows: 12,
+      rows: 4,
+      description:
+        "Use the SEO, GEO & AIO admin page for guided fields, toggles and examples. This JSON field is optional for advanced configuration.",
       default: "{}",
     },
     {
@@ -79,44 +88,63 @@ export default definePlugin({
       id: "indexNowKey",
       label: "IndexNow ownership key (published in its verification file)",
       type: "text",
+      placeholder: "An 8–128 character key: letters, digits and hyphens",
+      description:
+        "Optional. Use a unique ownership key for this website; the key is published in a verification file.",
     },
     {
       id: "googleProperty",
       label: "Search Console property (URL origin or sc-domain)",
       type: "text",
+      placeholder: "sc-domain:example.com or https://www.example.com/",
+      description:
+        "Optional. Must match a property verified in your Google Search Console account.",
     },
     {
       id: "googleAccessToken",
       label: "Google access token (webmasters.readonly)",
       type: "password",
       secret: true,
+      placeholder: "Optional — leave blank when not using this integration",
     },
-    { id: "googleClientId", label: "Google OAuth client ID", type: "text" },
+    {
+      id: "googleClientId",
+      label: "Google OAuth client ID",
+      type: "text",
+      placeholder: "123456789.apps.googleusercontent.com",
+    },
     {
       id: "googleClientSecret",
       label: "Google OAuth client secret",
       type: "password",
       secret: true,
+      placeholder: "Optional — leave blank when not using this integration",
     },
     {
       id: "googleRefreshToken",
       label: "Google OAuth refresh token",
       type: "password",
       secret: true,
+      placeholder: "Optional — leave blank when not using this integration",
     },
     {
       id: "bingApiKey",
       label: "Bing Webmaster API key",
       type: "password",
       secret: true,
+      placeholder: "Optional — leave blank when not using this integration",
     },
   ],
   adminPages: [
     {
       id: "overview",
-      title: "SEO & GEO",
-      navLabel: "SEO & GEO",
-      content: { kind: "app", heading: "SEO & GEO", entry: "admin/index.js" },
+      title: "SEO, GEO & AIO",
+      navLabel: "SEO, GEO & AIO",
+      content: {
+        kind: "app",
+        heading: "SEO, GEO & AIO",
+        entry: "admin/index.js",
+      },
     },
   ],
 });

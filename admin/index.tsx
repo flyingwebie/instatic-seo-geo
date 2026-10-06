@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Type, type Static } from "@sinclair/typebox";
 import { definePluginAdminApp } from "#instatic-sdk";
 import { usePluginRoutes, usePluginSettings } from "@instatic/host-hooks";
@@ -10,16 +10,18 @@ import {
   Input,
   Select,
   Stack,
-  Switch,
   Text,
-  Textarea,
   pushToast,
 } from "@instatic/host-ui";
 import {
   StatusSchema,
+  PageChoicesSchema,
   ProgressSchema,
   IndexNowResultSchema,
 } from "../src/adminSchemas";
+import { Configuration } from "./configuration/Configuration";
+import { AioReview } from "./AioReview";
+import { parseOptions, siteOrigin } from "../src/config";
 import { VisibilityReportSchema } from "../src/integrations";
 
 export default definePluginAdminApp(function SeoGeo() {
@@ -28,6 +30,19 @@ export default definePluginAdminApp(function SeoGeo() {
   const [siteUrl, setSiteUrl] = useState(String(settings.siteUrl ?? ""));
   const [options, setOptions] = useState(String(settings.options ?? "{}"));
   const [llms, setLlms] = useState(settings.llmsEnabled === true);
+  const [pageChoices, setPageChoices] = useState<
+    Static<typeof PageChoicesSchema>
+  >([]);
+  const [pendingJson, setPendingJson] = useState(false);
+  const pause = useRef(false);
+  const [generating, setGenerating] = useState(false);
+  let validConfiguration = !pendingJson;
+  try {
+    parseOptions(options);
+    siteOrigin(siteUrl);
+  } catch {
+    validConfiguration = false;
+  }
   const [status, setStatus] = useState<Static<typeof StatusSchema>>();
   const [busy, setBusy] = useState(false),
     [progress, setProgress] = useState("");
@@ -47,16 +62,22 @@ export default definePluginAdminApp(function SeoGeo() {
     });
   useEffect(() => {
     let active = true;
-    routes
-      .json("/status", StatusSchema)
-      .then((value) => {
-        if (active) setStatus(value);
+    Promise.all([
+      routes.json("/status", StatusSchema),
+      routes.json("/pages", PageChoicesSchema),
+    ])
+      .then(([value, pages]) => {
+        if (active) {
+          setStatus(value);
+          setPageChoices(pages);
+        }
       })
       .catch((error: unknown) => {
         if (active) errorToast(error);
       });
     return () => {
       active = false;
+      pause.current = true;
     };
     // The host owns the stable route facade for this mounted plugin.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,24 +91,49 @@ export default definePluginAdminApp(function SeoGeo() {
       errorToast(error);
     } finally {
       setBusy(false);
+      setGenerating(false);
     }
   };
-  const save = () =>
-    routes.json("/configure", Type.Object({ ok: Type.Boolean() }), {
+  const save = () => {
+    siteOrigin(siteUrl);
+    const normalized = JSON.stringify(parseOptions(options));
+    if (pendingJson)
+      throw new Error(
+        "Apply or discard the advanced JSON draft before saving.",
+      );
+    return routes.json("/configure", Type.Object({ ok: Type.Boolean() }), {
       method: "POST",
-      body: JSON.stringify({ siteUrl, options, llmsEnabled: llms }),
+      body: JSON.stringify({ siteUrl, options: normalized, llmsEnabled: llms }),
     });
-  const generate = () =>
-    perform(async () => {
+  };
+  const generate = () => {
+    setGenerating(true);
+    return perform(async () => {
+      pause.current = false;
       await save();
+      let previousCheckpoint = "";
       let result = await routes.json("/generate", ProgressSchema, {
         method: "POST",
-        body: JSON.stringify({ force: true }),
+        body: "{}",
       });
       while (!result.done) {
+        const checkpoint = `${result.phase}:${result.offset}:${result.refreshed ?? 0}`;
+        if (checkpoint === previousCheckpoint)
+          throw new Error(
+            "Generation did not advance. Check the Instatic core version and retry after resolving the host error.",
+          );
+        previousCheckpoint = checkpoint;
         setProgress(
-          `Processed ${result.offset} of ${result.total} pages; refreshing published HTML.`,
+          result.phase === "html"
+            ? `Refreshing public HTML: ${result.refreshed ?? 0} of ${result.total} pages.`
+            : `Generating discovery content: ${result.offset} of ${result.total} pages.`,
         );
+        if (pause.current) {
+          setProgress(
+            "Foreground generation paused. Saved progress can resume; automatic background generation may continue.",
+          );
+          return;
+        }
         result = await routes.json("/generate", ProgressSchema, {
           method: "POST",
           body: "{}",
@@ -96,6 +142,7 @@ export default definePluginAdminApp(function SeoGeo() {
       setProgress(`Generation completed: ${result.total} published routes.`);
       pushToast({ kind: "success", title: "Published content generated" });
     });
+  };
   const download = () =>
     perform(async () => {
       const response = await routes.fetch("/download");
@@ -115,50 +162,58 @@ export default definePluginAdminApp(function SeoGeo() {
     });
   return (
     <Stack gap={20}>
-      <Heading level={1}>SEO &amp; GEO</Heading>
+      <Heading level={1}>SEO, GEO &amp; AIO</Heading>
       <Alert tone="warning" title="Unofficial · Alpha testing">
         This independently maintained plugin improves technical discoverability.
         Search providers decide indexing, rankings, and citations.
       </Alert>
       <Card>
         <Stack gap={12}>
-          <Heading level={2}>Publish accurate discovery files</Heading>
-          <Text>
-            Set your public website origin, then generate from published
-            content. Drafts and visitor-specific fragments stay private.
-            Collections default to posts; enable additional public tables in the
-            JSON options.
-          </Text>
-          <Input
-            label="Website origin"
-            value={siteUrl}
-            onChange={setSiteUrl}
-            placeholder="https://example.com"
-            disabled={busy}
-          />
-          <Switch
-            label="Publish optional llms.txt"
-            description="A convenience index for consumers that use it; no ranking benefit is promised."
-            checked={llms}
-            onChange={setLlms}
-            disabled={busy}
-          />
-          <Textarea
-            label="Metadata, profiles, schemas, redirects, translations, and crawler policies"
-            description="Use the documented options in the repository configuration guide. Omit fields to preserve authored page metadata."
-            value={options}
+          <Configuration
+            raw={options}
             onChange={setOptions}
-            rows={12}
+            onPendingChange={setPendingJson}
+            siteUrl={siteUrl}
+            onSiteUrlChange={setSiteUrl}
+            llms={llms}
+            onLlmsChange={setLlms}
+            pages={pageChoices}
             disabled={busy}
           />
           <Stack direction="row" gap={8} wrap>
             <Button
               variant="primary"
-              disabled={busy || !siteUrl}
+              disabled={busy || !validConfiguration}
               onClick={generate}
             >
               Save &amp; generate
             </Button>
+            <Button
+              variant="secondary"
+              disabled={busy || !validConfiguration}
+              onClick={() =>
+                perform(async () => {
+                  await save();
+                  pushToast({
+                    kind: "success",
+                    title: "Settings saved",
+                    body: "Generate to update discovery exports and published metadata.",
+                  });
+                })
+              }
+            >
+              Save settings
+            </Button>
+            {generating && busy && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  pause.current = true;
+                }}
+              >
+                Pause foreground generation
+              </Button>
+            )}
             <Button
               variant="secondary"
               disabled={busy || !status?.generated}
@@ -190,6 +245,7 @@ export default definePluginAdminApp(function SeoGeo() {
           </Text>
         </Stack>
       </Card>
+      <AioReview status={status} />
       <Card>
         <Stack gap={12}>
           <Heading level={2}>Publication checks</Heading>
@@ -208,7 +264,7 @@ export default definePluginAdminApp(function SeoGeo() {
                       ? "warning"
                       : "info"
                 }
-                title={`${finding.path} · ${finding.code}`}
+                title={`${finding.path} · ${finding.severity === "error" ? "Action needed" : "Review suggested"}`}
               >
                 <Text>{finding.message}</Text>
                 <Text>{finding.fix}</Text>

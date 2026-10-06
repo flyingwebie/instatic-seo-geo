@@ -16,7 +16,7 @@ concurrency:
 
 env:
   BUN_VERSION: 1.4.2
-  INSTATIC_REF: a509ecfb7a922a9ba7b3b9c94d1a917daa5bf01d
+  INSTATIC_REF: 9314b201268baffc74de35dd149688964d666f39
 
 jobs:
   validate:
@@ -138,9 +138,9 @@ jobs:
 
           ### Install the ZIP
 
-          **Update Instatic first:** the running server and admin build must include the publication SDK and permissions from [host PR #8](https://github.com/flyingwebie/Instatic/pull/8), now merged into host main. This release is validated against host commit \`$INSTATIC_REF\`. Update/rebuild and restart or redeploy existing installations, then reload the admin page before uploading.
+          **Update Instatic first:** the running server and admin build must include the publication SDK and permissions from [host PR #8](https://github.com/flyingwebie/Instatic/pull/8), and the PostgreSQL plugin storage fix from [host PR #12](https://github.com/flyingwebie/Instatic/pull/12), both merged into host main. This release is validated against host commit \`$INSTATIC_REF\`. Update/rebuild and restart or redeploy existing installations, then reload the admin page before uploading.
 
-          Docker/Coolify deployments can use the fork-specific \`docker-compose.coolify.flyingwebie.yml\` template from [host PR #9](https://github.com/flyingwebie/Instatic/pull/9), which pulls \`ghcr.io/flyingwebie/instatic:latest\`. Publish a fresh fork core release containing the required SDK changes, update any existing \`INSTATIC_IMAGE\` override, and pull/restart in Coolify. A merge into host main alone does not update the published image.
+          Docker/Coolify deployments can use the fork-specific \`docker-compose.coolify.flyingwebie.yml\` template from [host PR #9](https://github.com/flyingwebie/Instatic/pull/9), which pulls \`ghcr.io/flyingwebie/instatic:latest\`. Publish a fresh fork core release containing the required SDK and storage changes, update any existing \`INSTATIC_IMAGE\` override, and pull/restart in Coolify. A merge into host main alone does not update the published image.
 
           An older host rejects \`cms.routes.site\` and \`cms.publication.read\` with \`Invalid plugin manifest: Expected union value\`. See the [installation requirements](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/README.md#update-instatic-before-uploading).
 

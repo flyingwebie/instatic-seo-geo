@@ -1,5 +1,14 @@
 import { Type } from "@sinclair/typebox";
 import { FindingSchema } from "./config";
+import { AioReportSchema } from "./aio";
+export const PageChoicesSchema = Type.Array(
+  Type.Object({
+    path: Type.String(),
+    title: Type.String(),
+    kind: Type.String(),
+    tableSlug: Type.String(),
+  }),
+);
 export const StatusSchema = Type.Object({
   configured: Type.Boolean(),
   stage: Type.String(),
@@ -23,6 +32,7 @@ export const StatusSchema = Type.Object({
       canonical: Type.String(),
       indexable: Type.Boolean(),
       lastModified: Type.String(),
+      aio: Type.Optional(AioReportSchema),
     }),
   ),
 });
@@ -30,6 +40,8 @@ export const ProgressSchema = Type.Object({
   done: Type.Boolean(),
   offset: Type.Integer(),
   total: Type.Integer(),
+  phase: Type.Optional(Type.String()),
+  refreshed: Type.Optional(Type.Integer()),
 });
 export const IndexNowResultSchema = Type.Object({
   enabled: Type.Boolean(),
