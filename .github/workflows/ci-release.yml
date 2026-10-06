@@ -138,10 +138,15 @@ jobs:
 
           ### Install the ZIP
 
+          **Update Instatic first:** the running server and admin build must include the publication SDK and permissions from [host PR #8](https://github.com/flyingwebie/Instatic/pull/8), now merged into host main. This release is validated against host commit \`$INSTATIC_REF\`. Update/rebuild and restart or redeploy existing installations, then reload the admin page before uploading.
+
+          Docker/Coolify deployments need a build from \`flyingwebie/Instatic\` containing those changes. Check your image's source revision: the default CoreBunch image does not automatically include changes merged into this fork.
+
+          An older host rejects \`cms.routes.site\` and \`cms.publication.read\` with \`Invalid plugin manifest: Expected union value\`. See the [installation requirements](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/README.md#update-instatic-before-uploading).
+
           1. Download \`seo-geo.plugin.zip\` from this release.
           2. Open Instatic **Admin → Plugins** and upload the ZIP.
           3. Review and approve the declared permissions, then confirm installation. Instatic installs and activates the plugin.
-
           4. Open the plugin app, set the public website origin, and generate the first export.
 
           \`SHA256SUMS\` verifies the package and \`build-info.json\` records its build inputs.

@@ -1,6 +1,8 @@
 # Configuration guide
 
-This is an **unofficial alpha-test plugin**. Install the plugin ZIP into the compatible Instatic build, open **SEO & GEO**, enter your public website origin (for example `https://example.com`), and click **Save & generate**. The origin is required because self-hosted Instatic does not have one authoritative public domain.
+This is an **unofficial alpha-test plugin**. Before uploading, deploy the Instatic server and admin assets with the publication SDK changes from [host PR #8](https://github.com/flyingwebie/Instatic/pull/8), now merged into host `main`. The [installation requirements and manifest-error recovery steps](../README.md#update-instatic-before-uploading) explain how to update an existing deployment. An older running host rejects `cms.routes.site` and `cms.publication.read` with `Invalid plugin manifest: Expected union value`.
+
+Install the plugin ZIP into the compatible Instatic build, open **SEO & GEO**, enter your public website origin (for example `https://example.com`), and click **Save & generate**. The origin is required because self-hosted Instatic does not have one authoritative public domain.
 
 Published pages are included automatically. Collection entries default to the public `posts` table; explicitly opt other public tables into `collectionTables`. Templates, layout/component definitions, drafts, preview branches, hidden content, and visitor-specific holes are never content exports. Important content in dynamic fragments produces a diagnostic.
 
