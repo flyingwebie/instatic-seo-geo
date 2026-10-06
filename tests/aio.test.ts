@@ -52,6 +52,37 @@ test("AIO verifies a visible selected answer, topic, sources and author without 
     result.page.schemas.some((node) => String(node["@type"]).includes("AI")),
   ).toBe(false);
 });
+test("AIO attribution explains author visibility and publication-date status independently", () => {
+  for (const hasDate of [false, true]) {
+    for (const hasAuthor of [true, false]) {
+      const doc = document(
+        "/guide",
+        "<main><h1>Guide</h1><p>Jane Smith wrote this.</p></main>",
+        hasDate ? {} : { firstPublishedAt: "", publishedAt: "" },
+      );
+      const result = enrichPage(doc.html, doc.route, origin, doc.siteName, {
+        profiles: [{ id: "jane", name: "Jane Smith", type: "Person" }],
+        pages: { "/guide": { authors: hasAuthor ? ["jane"] : [] } },
+      });
+      const attribution = result.page.aio?.checks.find(
+        (check) => check.id === "attribution",
+      );
+      expect(attribution?.status).toBe(
+        hasAuthor && hasDate ? "pass" : "review",
+      );
+      expect(attribution?.detail).toContain(
+        hasAuthor
+          ? "A configured author name appears in published content."
+          : "No visible configured author was verified; some pages do not need a byline.",
+      );
+      expect(attribution?.detail).toContain(
+        hasDate
+          ? "A valid publication date was found."
+          : "No valid publication date was found.",
+      );
+    }
+  }
+});
 test("an unpublished answer stays an editorial finding and is never inserted into HTML", () => {
   const result = enriched("", {
     pages: {

@@ -13,6 +13,75 @@ import { elements, parsePage } from "../src/html";
 import { document, origin } from "./fixtures";
 
 describe("Published content representations", () => {
+  test("absent or empty custom breadcrumbs use the automatic hierarchy and non-empty custom trails are preserved", () => {
+    const doc = document("/services/consulting", undefined, {
+      title: "Consulting",
+    });
+    const knownRoutes = [
+      document("/services", undefined, { title: "Services" }).route,
+      doc.route,
+    ];
+    for (const breadcrumbs of [undefined, []]) {
+      const options = parseOptions(
+        JSON.stringify({ pages: { [doc.route.path]: { breadcrumbs } } }),
+      );
+      const result = enrichPage(
+        doc.html,
+        doc.route,
+        origin,
+        doc.siteName,
+        options,
+        knownRoutes,
+      );
+      expect(
+        result.page.schemas.find((node) => node["@type"] === "BreadcrumbList")
+          ?.itemListElement,
+      ).toEqual([
+        { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Services",
+          item: origin + "/services",
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: "Consulting",
+          item: origin + "/services/consulting",
+        },
+      ]);
+    }
+    const result = enrichPage(
+      doc.html,
+      doc.route,
+      origin,
+      doc.siteName,
+      {
+        pages: {
+          [doc.route.path]: {
+            breadcrumbs: [
+              { name: "Start", path: "/" },
+              { name: "Advice", path: doc.route.path },
+            ],
+          },
+        },
+      },
+      knownRoutes,
+    );
+    expect(
+      result.page.schemas.find((node) => node["@type"] === "BreadcrumbList")
+        ?.itemListElement,
+    ).toEqual([
+      { "@type": "ListItem", position: 1, name: "Start", item: origin + "/" },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Advice",
+        item: origin + doc.route.path,
+      },
+    ]);
+  });
   test("preserves structure, code, links, tables and images while omitting hidden/request content", async () => {
     const code =
       "const a = " +
