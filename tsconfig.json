@@ -2,8 +2,9 @@
   "extends": "./.instatic/tsconfig.json",
   "compilerOptions": {
     "strict": true,
-    "noEmit": true
+    "noEmit": true,
+    "resolveJsonModule": true
   },
-  "include": ["instatic-plugin.config.ts", "server/**/*.ts", "scripts/**/*.ts"],
+  "include": ["instatic-plugin.config.ts", "server/**/*.ts", "src/**/*.ts", "admin/**/*.tsx", "scripts/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist", "artifacts"]
 }
