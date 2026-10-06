@@ -319,24 +319,27 @@ export function enrichPage(
       ? { publisher: { "@id": origin + "/#profile-" + publisher.id } }
       : {}),
   });
-  const crumbs = authored.breadcrumbs ?? [
-    { name: "Home", path: "/" },
-    ...context.path
-      .split("/")
-      .filter(Boolean)
-      .slice(0, -1)
-      .map((_, i, segments) => ({
-        path: "/" + segments.slice(0, i + 1).join("/"),
-        name:
-          knownRoutes.find(
-            (route) => route.path === "/" + segments.slice(0, i + 1).join("/"),
-          )?.title ?? "",
-      }))
-      .filter((crumb) => crumb.name),
-    ...(context.path !== "/"
-      ? [{ name: context.title || title, path: context.path }]
-      : []),
-  ];
+  const crumbs = authored.breadcrumbs?.length
+    ? authored.breadcrumbs
+    : [
+        { name: "Home", path: "/" },
+        ...context.path
+          .split("/")
+          .filter(Boolean)
+          .slice(0, -1)
+          .map((_, i, segments) => ({
+            path: "/" + segments.slice(0, i + 1).join("/"),
+            name:
+              knownRoutes.find(
+                (route) =>
+                  route.path === "/" + segments.slice(0, i + 1).join("/"),
+              )?.title ?? "",
+          }))
+          .filter((crumb) => crumb.name),
+        ...(context.path !== "/"
+          ? [{ name: context.title || title, path: context.path }]
+          : []),
+      ];
   add({
     "@type": "BreadcrumbList",
     "@id": breadcrumbId,
