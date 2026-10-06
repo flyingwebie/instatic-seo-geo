@@ -214,9 +214,14 @@ export function auditAio(input: {
     "attribution",
     "Attribution and dates",
     input.authorsVisible && input.datePublished ? "pass" : "review",
-    input.authorsVisible
-      ? "A configured author name appears in published content."
-      : "No visible configured author was verified; some pages do not need a byline.",
+    [
+      input.authorsVisible
+        ? "A configured author name appears in published content."
+        : "No visible configured author was verified; some pages do not need a byline.",
+      input.datePublished
+        ? "A valid publication date was found."
+        : "No valid publication date was found.",
+    ].join(" "),
     "For articles, publish a real byline and accurate dates, then select the author profile in Pages.",
   );
   return { checks, answer: answer.slice(0, 600), sourceCount };

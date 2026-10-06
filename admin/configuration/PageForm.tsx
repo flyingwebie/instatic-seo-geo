@@ -317,7 +317,7 @@ export function PageForm({
         disabled={disabled}
         onChange={(next) => {
           setCrumbsEnabled(next);
-          update({ breadcrumbs: next ? [] : undefined });
+          if (!next) update({ breadcrumbs: undefined });
         }}
       />
       {crumbsEnabled && (
