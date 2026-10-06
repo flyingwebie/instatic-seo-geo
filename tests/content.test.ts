@@ -319,3 +319,20 @@ describe("Published content representations", () => {
     ).toThrow("ISO date");
   });
 });
+
+test("preserves article headers, source footers and code indentation while omitting hidden descendants", async () => {
+  const doc = document(
+    "/article",
+    '<header>Site navigation</header><main><article><header><h1>Article heading</h1><p>Jane Example</p></header><p>Public body.</p><div hidden><a href="/private">Private link</a><img src="/private.jpg" alt="Private media"></div><pre><code>  indented<span> code</span>\n\n\ntrailing  \n</code></pre><footer>Evidence: <a href="/source">Source</a></footer></article></main><footer>Site footer</footer>',
+  );
+  const { page } = await generateDocument(doc, origin, {}, "c", [doc.route]);
+  expect(page.markdown).toContain("# Article heading");
+  expect(page.markdown).toContain("Jane Example");
+  expect(page.markdown).toContain("Evidence:");
+  expect(page.markdown).toContain("\n  indented code\n\n\ntrailing  \n");
+  expect(page.markdown).not.toContain("Site navigation");
+  expect(page.markdown).not.toContain("Site footer");
+  expect(page.markdown).not.toContain("Private");
+  expect(page.links).not.toContain(origin + "/private");
+  expect(page.images).toHaveLength(0);
+});

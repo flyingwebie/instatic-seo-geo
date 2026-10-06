@@ -31,16 +31,56 @@ export function hidden(node: HtmlElement): boolean {
     )
   );
 }
+function pageChrome(node: HtmlElement): boolean {
+  if (!["header", "footer"].includes(node.tagName)) return false;
+  for (
+    let parent = node.parentNode;
+    parent;
+    parent = "parentNode" in parent ? parent.parentNode : null
+  ) {
+    if (isElement(parent) && ["main", "article"].includes(parent.tagName))
+      return false;
+  }
+  return true;
+}
+function omittedContent(node: HtmlElement): boolean {
+  return (
+    hidden(node) ||
+    pageChrome(node) ||
+    [
+      "script",
+      "style",
+      "template",
+      "noscript",
+      "nav",
+      "form",
+      "button",
+      "input",
+      "instatic-hole",
+    ].includes(node.tagName)
+  );
+}
+/** Walk meaningful content without leaking descendants of hidden or omitted containers. */
+export function contentElements(node: HtmlNode, tag?: string): HtmlElement[] {
+  const found: HtmlElement[] = [];
+  function walk(current: HtmlNode): void {
+    if (isElement(current)) {
+      if (omittedContent(current)) return;
+      if (!tag || current.tagName === tag) found.push(current);
+    }
+    for (const child of children(current)) walk(child);
+  }
+  walk(node);
+  return found;
+}
+function codeText(node: HtmlNode): string {
+  if (node.nodeName === "#text" && "value" in node) return node.value;
+  if (isElement(node) && omittedContent(node)) return "";
+  return children(node).map(codeText).join("");
+}
 export function text(node: HtmlNode): string {
   if (node.nodeName === "#text" && "value" in node) return node.value;
-  if (
-    isElement(node) &&
-    (hidden(node) ||
-      ["script", "style", "template", "noscript", "instatic-hole"].includes(
-        node.tagName,
-      ))
-  )
-    return "";
+  if (isElement(node) && omittedContent(node)) return "";
   return children(node).map(text).join(" ");
 }
 export const compactText = (node: HtmlNode): string =>
@@ -86,7 +126,7 @@ function escapeMarkdown(value: string): string {
 function inline(node: HtmlNode, base: string): string {
   if (node.nodeName === "#text" && "value" in node)
     return escapeMarkdown(node.value.replace(/\s+/g, " "));
-  if (!isElement(node) || hidden(node)) return "";
+  if (!isElement(node) || omittedContent(node)) return "";
   const content = children(node)
     .map((child) => inline(child, base))
     .join("");
@@ -132,32 +172,25 @@ function inline(node: HtmlNode, base: string): string {
   }
   return content;
 }
+function joinBlocks(parts: string[]): string {
+  return parts.reduce(
+    (joined, part) =>
+      joined.endsWith("\n") && part.startsWith("\n")
+        ? joined.replace(/\n+$/, "\n\n") + part.replace(/^\n+/, "")
+        : joined + part,
+    "",
+  );
+}
 export function markdown(main: HtmlNode, base: string): string {
   function block(node: HtmlNode, depth = 0): string {
     if (!isElement(node)) return inline(node, base);
-    if (
-      hidden(node) ||
-      [
-        "script",
-        "style",
-        "template",
-        "noscript",
-        "nav",
-        "header",
-        "footer",
-        "form",
-        "button",
-        "input",
-        "instatic-hole",
-      ].includes(node.tagName)
-    )
-      return "";
+    if (omittedContent(node)) return "";
     const tag = node.tagName;
     if (/^h[1-6]$/.test(tag))
       return `\n\n${"#".repeat(Number(tag[1]))} ${inline(node, base).trim()}\n\n`;
     if (tag === "pre") {
       const code = elements(node, "code")[0];
-      const value = text(code ?? node).trim();
+      const value = codeText(code ?? node);
       const fence = "`".repeat(
         Math.max(
           3,
@@ -240,18 +273,23 @@ export function markdown(main: HtmlNode, base: string): string {
           .trim() +
         "\n\n"
       );
-    if (["div", "main", "article", "section", "body", "aside"].includes(tag))
-      return children(node)
-        .map((child) => block(child, depth))
-        .join("");
+    if (
+      [
+        "div",
+        "main",
+        "article",
+        "section",
+        "body",
+        "aside",
+        "header",
+        "footer",
+      ].includes(tag)
+    )
+      return joinBlocks(children(node).map((child) => block(child, depth)));
     return inline(node, base);
   }
-  return (
-    block(main)
-      .replace(/[ \t]+\n/g, "\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim() + "\n"
-  );
+  // Normalize only block boundaries; code whitespace is authored content.
+  return block(main).trim() + "\n";
 }
 export function remove(node: HtmlElement): void {
   const parent = node.parentNode;

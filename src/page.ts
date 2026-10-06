@@ -11,6 +11,7 @@ import {
   append,
   attribute,
   compactText,
+  contentElements,
   elements,
   escapeHtml,
   markdown,
@@ -117,11 +118,17 @@ export function enrichPage(
     authored.title ??
     (existingTitle ||
       context.title ||
-      compactText(elements(parsed.main, "h1")[0] ?? parsed.main).slice(0, 80));
+      compactText(contentElements(parsed.main, "h1")[0] ?? parsed.main).slice(
+        0,
+        80,
+      ));
   const description =
     authored.description ??
     meta(parsed.head, "description") ??
-    compactText(elements(parsed.main, "p")[0] ?? parsed.main).slice(0, 160);
+    compactText(contentElements(parsed.main, "p")[0] ?? parsed.main).slice(
+      0,
+      160,
+    );
   const originalCanonical = elements(parsed.head, "link").find((node) =>
     attribute(node, "rel")?.split(/\s+/).includes("canonical"),
   );
@@ -161,12 +168,12 @@ export function enrichPage(
     "en";
   const links = [
     ...new Set(
-      elements(parsed.main, "a")
+      contentElements(parsed.main, "a")
         .map((node) => safeUrl(attribute(node, "href") ?? "", ownUrl))
         .filter((url): url is string => url !== null),
     ),
   ];
-  const images = elements(parsed.main, "img")
+  const images = contentElements(parsed.main, "img")
     .map((node) => ({
       src: safeUrl(attribute(node, "src") ?? "", ownUrl) ?? "",
       alt: attribute(node, "alt") ?? "",
@@ -501,7 +508,7 @@ export function enrichPage(
         ...(schema.priceRange ? { priceRange: schema.priceRange } : {}),
       };
     } else {
-      const media = elements(parsed.main)
+      const media = contentElements(parsed.main)
         .filter((node) => ["video", "source", "iframe"].includes(node.tagName))
         .map((node) => safeUrl(attribute(node, "src") ?? "", ownUrl));
       if (
@@ -596,7 +603,7 @@ export function enrichPage(
   const lang = htmlElement.attrs.find((attr) => attr.name === "lang");
   if (lang) lang.value = language;
   else htmlElement.attrs.push({ name: "lang", value: language });
-  const headings = elements(parsed.main).filter((node) =>
+  const headings = contentElements(parsed.main).filter((node) =>
     /^h[1-6]$/.test(node.tagName),
   );
   if (headings.filter((node) => node.tagName === "h1").length !== 1)
@@ -652,7 +659,7 @@ export function enrichPage(
       "Some content depends on the visitor request and is absent from static HTML/Markdown.",
       "Publish important article content as deterministic HTML; private or personalized fragments are never exported.",
     );
-  for (const node of elements(parsed.main, "img")) {
+  for (const node of contentElements(parsed.main, "img")) {
     if (attribute(node, "alt") === undefined)
       finding(
         "image.alt-missing",

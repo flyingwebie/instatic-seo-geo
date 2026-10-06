@@ -68,7 +68,7 @@ See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependenc
 
 ## Quick start
 
-The functional alpha needs [Instatic host PR #8](https://github.com/flyingwebie/Instatic/pull/8). Until the feature PRs are merged, build the plugin's `feat/seo-geo-publishing` branch with the pinned host commit below; existing scaffold releases do not contain these features. [Release automation PR #2](https://github.com/flyingwebie/instatic-seo-geo/pull/2) is the parent of this plugin feature branch.
+The functional alpha is delivered in [plugin PR #3](https://github.com/flyingwebie/instatic-seo-geo/pull/3) and needs [Instatic host PR #8](https://github.com/flyingwebie/Instatic/pull/8). Until the feature PRs are merged, build the plugin's `feat/seo-geo-publishing` branch with the pinned host commit below; existing scaffold releases do not contain these features. [Release automation PR #2](https://github.com/flyingwebie/instatic-seo-geo/pull/2) is the parent of this plugin feature branch.
 
 **Download → upload → confirm → generate.** Installation requires the compatible Instatic publication SDK build and an account allowed to install/configure plugins. Plugin API `1` alone does not indicate support for the new permissions: older hosts reject this package. Use the pinned host revision in the build instructions below until the host foundation is merged.
 
