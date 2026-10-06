@@ -1,6 +1,8 @@
 # Configuration guide
 
-This is an **unofficial alpha-test plugin**. Install the ZIP on the tested compatible host, then open **SEO, GEO & AIO**. Everyday setup uses labelled fields, switches and example placeholders; no JSON is required.
+This is an **unofficial alpha-test plugin**. Before uploading, deploy a compatible Instatic server and admin build containing the publication SDK from [host PR #8](https://github.com/flyingwebie/Instatic/pull/8) and the PostgreSQL storage fix from [host PR #12](https://github.com/flyingwebie/Instatic/pull/12), both merged into host `main`. The [installation requirements and manifest-error recovery steps](../README.md#update-instatic-before-uploading) explain how to update an existing deployment. An older running host rejects `cms.routes.site` and `cms.publication.read` with `Invalid plugin manifest: Expected union value`.
+
+Install the ZIP on that host, then open **SEO, GEO & AIO**. Everyday setup uses labelled fields, switches and example placeholders; no JSON is required. Set the public website origin and click **Save & generate** as described below.
 
 ## Guided setup
 

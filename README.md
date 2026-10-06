@@ -72,7 +72,19 @@ See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependenc
 
 The **0.3 alpha** adds guided configuration and AIO publication checks. Download the matching build from the PR artifacts while it is under review; after merge, GitHub Actions publishes a new alpha prerelease automatically.
 
-**Download → upload → configure → generate.** Use an Instatic build containing the publication SDK and the PostgreSQL plugin JSON storage fix in [host PR #12](https://github.com/flyingwebie/Instatic/pull/12). The fix has merged into the host’s `main` and is prepared for **Instatic 0.0.23**. The latest published core tag, **0.0.22**, does not include it; use the tested commit below until a release containing the fix is published. This plugin's CI and source-build instructions pin the tested host commit. Plugin API `1` alone does not prove host compatibility.
+### Update Instatic before uploading
+
+**Deploy the compatible host first.** This plugin requires the publication SDK and permissions from [host PR #8](https://github.com/flyingwebie/Instatic/pull/8) and the PostgreSQL plugin JSON storage fix from [host PR #12](https://github.com/flyingwebie/Instatic/pull/12), both merged into the host’s `main`. The release is validated against host commit `9314b201268baffc74de35dd149688964d666f39`; `build-info.json` records that revision for each ZIP. The running host must include those changes. Plugin API `1` and the host’s package version alone do not identify this support.
+
+The storage fix is prepared for **Instatic 0.0.23**. The latest published core tag, **0.0.22**, does not include it; use the tested commit below until a release containing the fix is published.
+
+For an existing deployment, update its Instatic source or container image, rebuild the server and admin assets, restart/redeploy it, and reload the admin page before uploading. Follow the host's [deployment guide](https://github.com/flyingwebie/Instatic/blob/main/docs/deployment/README.md) for your installation method. Merging a host PR or rebuilding only the plugin does not update a running Instatic installation.
+
+For Docker/Coolify, use the fork-specific `docker-compose.coolify.flyingwebie.yml` template delivered in [host PR #9](https://github.com/flyingwebie/Instatic/pull/9). It pulls `ghcr.io/flyingwebie/instatic:latest`; the host release workflow builds and publishes that image when a version tag is pushed. Publish a fresh fork core release containing the required SDK and storage changes before redeploying. Merging source changes into `main` alone does not update the image's `latest` tag.
+
+Load the new template into the existing Postgres Coolify resource, retaining its service names, volumes, environment, domain and secret key. Set any existing `INSTATIC_IMAGE` override to `ghcr.io/flyingwebie/instatic:latest` or the published fork version tag. Save the definition and use **Pull Latest Images & Restart**, then reload **Admin → Plugins** and upload the same ZIP. See [Coolify's Compose guide](https://coolify.io/docs/services/configuration/docker-compose) and the [host deployment guide](https://github.com/flyingwebie/Instatic/blob/main/docs/deployment/coolify.md).
+
+**Download → upload → configure → generate.** Installation requires an account allowed to install/configure plugins.
 
 1. Open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download **`seo-geo.plugin.zip`** from a prerelease.
 2. In Instatic, open **Admin → Plugins** and upload that ZIP.
@@ -103,6 +115,12 @@ The response identifies the unofficial alpha version and reports configuration, 
 - Optional `/llms.txt` and the IndexNow ownership key file.
 
 **Download content ZIP** exports Markdown, sitemap files, and a canonical URL manifest. Published HTML stays authoritative.
+
+### Installation error: `Invalid plugin manifest: Expected union value`
+
+An older host rejects this plugin's `cms.routes.site` and `cms.publication.read` permissions with this message. Update the running Instatic server and its admin assets using the [host requirements above](#update-instatic-before-uploading), restart/redeploy, reload **Admin → Plugins**, and upload the same release ZIP again.
+
+If the server has already been updated, reload the admin page to load its rebuilt assets. If the error persists, include the plugin release tag, deployed Instatic commit/image identifier, and the response from the package inspection request (`/admin/api/cms/plugins/inspect-package`) in a [bug report](https://github.com/flyingwebie/instatic-seo-geo/issues). Omit cookies, authorization headers, and credentials.
 
 ## AIO without ranking promises
 
