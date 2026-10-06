@@ -72,7 +72,7 @@ See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependenc
 
 The **0.3 alpha** adds guided configuration and AIO publication checks. Download the matching build from the PR artifacts while it is under review; after merge, GitHub Actions publishes a new alpha prerelease automatically.
 
-**Download → upload → configure → generate.** Use an Instatic build containing the publication SDK and the PostgreSQL plugin JSON storage fix in [host PR #12](https://github.com/flyingwebie/Instatic/pull/12). That fix is prepared for **Instatic 0.0.23**; it is not a published release while the PR remains open. This plugin's CI and source-build instructions pin the tested host commit. Plugin API `1` alone does not prove host compatibility.
+**Download → upload → configure → generate.** Use an Instatic build containing the publication SDK and the PostgreSQL plugin JSON storage fix in [host PR #12](https://github.com/flyingwebie/Instatic/pull/12). The fix has merged into the host’s `main` and is prepared for **Instatic 0.0.23**. The latest published core tag, **0.0.22**, does not include it; use the tested commit below until a release containing the fix is published. This plugin's CI and source-build instructions pin the tested host commit. Plugin API `1` alone does not prove host compatibility.
 
 1. Open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download **`seo-geo.plugin.zip`** from a prerelease.
 2. In Instatic, open **Admin → Plugins** and upload that ZIP.
