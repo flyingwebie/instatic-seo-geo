@@ -76,6 +76,20 @@ For an existing deployment, update its Instatic source or container image, rebui
 
 For Docker/Coolify, build from `flyingwebie/Instatic` with those commits, or select an image built from that source. The host's default Compose templates point to `ghcr.io/corebunch/instatic:latest`; check the selected image's source revision before deploying. The changes merged into this fork are not automatically included in an upstream image.
 
+For an existing Coolify **Docker Compose** resource, replace only the Instatic service's `image:` line with this pinned build block. Retain the service's environment, volumes, domain, health check, and database configuration, including its existing secret key:
+
+```yaml
+services:
+  instatic:
+    build:
+      context: "https://github.com/flyingwebie/Instatic.git#7f605592f9e3d72731bd82c249e867318a570853"
+      dockerfile: Dockerfile
+      args:
+        INSTATIC_REVISION: "7f605592f9e3d72731bd82c249e867318a570853"
+```
+
+This is a partial service definition, not a replacement for the whole Compose file. Docker builds the server and admin assets from the selected host commit. In Coolify, edit the saved Compose definition for a user-defined Service; for a Git-based Application, commit the same change to its Compose source file. Save/validate and redeploy the existing resource, then reload **Admin → Plugins** and upload the ZIP. See [Coolify's Compose guide](https://coolify.io/docs/applications/builds/docker-compose) and [Docker's Git build contexts](https://docs.docker.com/build/concepts/context/#git-repositories).
+
 **Download → upload → confirm → generate.** Installation requires an account allowed to install/configure plugins.
 
 1. Open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download **`seo-geo.plugin.zip`** from a prerelease.
