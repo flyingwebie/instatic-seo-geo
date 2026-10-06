@@ -31,7 +31,7 @@ The intended workflow is straightforward: publish your website, then generate ac
 > [!IMPORTANT]
 > **This plugin is NOT official and is still in alpha testing.** It is independently maintained and is not an official Instatic product or release.
 >
-> **The current implementation is a development scaffold.** You can build a plugin ZIP and activate its authenticated status endpoint. Markdown exports, sitemaps, SEO enrichment, and Schema.org generation are planned and are not implemented in the `0.1.0-alpha.*` builds. An automatically published alpha package does not mean those features are complete.
+> **The complete planned feature set is implemented for alpha testing on the compatible host build.** It includes Markdown, discovery files, metadata, Schema.org, audits, redirects, multilingual validation, and optional integrations. Alpha status still applies: review the [configuration and limits](docs/configuration.md) before using it with real content.
 
 ## Why this project exists
 
@@ -48,35 +48,38 @@ These are product goals. A plugin can improve technical readiness; it cannot gua
 
 ## Features and status
 
-| Capability | Scope | Status |
-| --- | --- | --- |
-| Standalone project | Bun tooling, strict TypeScript, ESLint, and local SDK setup | ✅ Available |
-| ZIP packaging | Host CLI produces a manifest and a self-contained server bundle | ✅ Available |
-| Sandbox entrypoint | QuickJS activation and a `plugins.read`-gated status endpoint | ✅ Available |
-| Release automation | PR validation and ZIP artifacts; alpha prereleases after successful updates to `main` | ✅ Configured |
-| Markdown publishing | Published pages, articles, and explicitly permitted collection entries | 📋 Planned |
-| XML sitemaps | Canonical HTML routes, meaningful modification dates, partitioning | 📋 Planned |
-| SEO metadata | Titles, descriptions, canonical/robots controls, and social previews | 📋 Planned |
-| Schema.org | Site/page identity, publishers, articles, visible FAQs, and breadcrumbs | 📋 Planned |
-| Content ZIP export | Markdown, sitemap files, and a file-to-canonical-URL manifest | 📋 Planned |
-| Publication checks | Indexability preflight and HTML/Markdown/schema consistency | 📋 Planned |
-| Redirects and links | URL-change handling, orphan-page detection, and link suggestions | 📋 Planned |
-| GEO discovery | Separate search/training preferences and optional `llms.txt` | 📋 Planned |
-| Extended support | IndexNow, multilingual validation, specialized schema, visibility reports | 📋 Planned |
+| Capability          | Scope                                                                                 | Status                 |
+| ------------------- | ------------------------------------------------------------------------------------- | ---------------------- |
+| Standalone project  | Bun tooling, strict TypeScript, ESLint, and local SDK setup                           | ✅ Available           |
+| ZIP packaging       | Host CLI produces a manifest and a self-contained server bundle                       | ✅ Available           |
+| Sandbox entrypoint  | QuickJS activation and a `plugins.read`-gated status endpoint                         | ✅ Available           |
+| Release automation  | PR validation and ZIP artifacts; alpha prereleases after successful updates to `main` | ✅ Configured          |
+| Markdown publishing | Published pages, articles, and explicitly allowlisted public collection entries       | ✅ Implemented · alpha |
+| XML sitemaps        | Canonical HTML routes, meaningful modification dates, partitioning                    | ✅ Implemented · alpha |
+| SEO metadata        | Titles, descriptions, canonical/robots controls, and social previews                  | ✅ Implemented · alpha |
+| Schema.org          | Site/page identity, publishers, articles, visible FAQs, and breadcrumbs               | ✅ Implemented · alpha |
+| Content ZIP export  | Markdown, sitemap files, and a file-to-canonical-URL manifest                         | ✅ Implemented · alpha |
+| Publication checks  | Indexability preflight and HTML/Markdown/schema consistency                           | ✅ Implemented · alpha |
+| Redirects and links | URL-change handling, orphan-page detection, and link suggestions                      | ✅ Implemented · alpha |
+| GEO discovery       | Separate search/training preferences and optional `llms.txt`                          | ✅ Implemented · alpha |
+| Extended support    | IndexNow, multilingual validation, specialized schema, visibility reports             | ✅ Implemented · alpha |
 
 See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependencies, and acceptance criteria.
 
 ## Quick start
 
-**Download → upload → confirm.** Installation requires a compatible running Instatic instance and an account allowed to install plugins. The scaffold was verified against Instatic `0.0.21` and plugin API `1`.
+The functional alpha needs [Instatic host PR #8](https://github.com/flyingwebie/Instatic/pull/8). Until the feature PRs are merged, build the plugin's `feat/seo-geo-publishing` branch with the pinned host commit below; existing scaffold releases do not contain these features. [Release automation PR #2](https://github.com/flyingwebie/instatic-seo-geo/pull/2) is the parent of this plugin feature branch.
+
+**Download → upload → confirm → generate.** Installation requires the compatible Instatic publication SDK build and an account allowed to install/configure plugins. Plugin API `1` alone does not indicate support for the new permissions: older hosts reject this package. Use the pinned host revision in the build instructions below until the host foundation is merged.
 
 1. Open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download **`seo-geo.plugin.zip`** from a prerelease.
 2. In Instatic, open **Admin → Plugins** and upload that ZIP.
-3. Review and approve the requested `cms.routes` permission, then confirm installation. Instatic validates, installs, and activates the plugin.
+3. Review and approve the requested permissions, then confirm installation. Instatic validates, installs, and activates the plugin.
+4. Open **SEO & GEO**, enter your public website origin, and click **Save & generate**. Optional provider credentials live in the plugin Settings panel.
 
 The ZIP contains the plugin manifest and bundled code. Bun, Git, and the SDK checkout are development tools used to build the package from source. Keep the ZIP intact when uploading it.
 
-**These packages are unofficial alpha builds.** Consult the feature table above: the current scaffold provides a status endpoint; the SEO and content-generation features are still planned. Use a local test instance for alpha testing.
+**These packages are unofficial alpha builds.** The installable plugin ZIP is separate from the generated content ZIP. See the [configuration guide](docs/configuration.md) for page metadata, real author/publisher profiles, FAQs, redirects, translations, crawler policies, and integrations.
 
 ### Check the installation
 
@@ -86,22 +89,14 @@ While signed in with the `plugins.read` capability, open:
 /admin/api/cms/plugins/instatic.seo-geo/runtime/status
 ```
 
-The current response explicitly identifies the scaffold:
+The response identifies the unofficial alpha version and reports configuration, generation progress, current eligible pages, and concrete findings. Public files appear after generation:
 
-```json
-{
-  "pluginId": "instatic.seo-geo",
-  "version": "0.1.0-alpha.0",
-  "official": false,
-  "channel": "alpha",
-  "stage": "scaffold",
-  "features": {
-    "markdown": false,
-    "sitemap": false,
-    "structuredData": false
-  }
-}
-```
+- `/sitemap.xml` and partitioned `/sitemaps/<number>.xml` when needed.
+- `/robots.txt` with separate search, training, and user-retrieval preferences.
+- `/markdown/index.md` for the homepage; `/markdown/<route>/index.md` for nested pages.
+- Optional `/llms.txt` and the IndexNow ownership key file.
+
+**Download content ZIP** exports Markdown, sitemap files, and a canonical URL manifest. Published HTML stays authoritative.
 
 ## Development
 
@@ -129,7 +124,7 @@ From your workspace directory:
 ```sh
 git clone https://github.com/flyingwebie/Instatic.git Instatic
 cd Instatic
-git checkout f4e692f70d012be82e47c3dce5cf23aec4d573bc
+git checkout a509ecfb7a922a9ba7b3b9c94d1a917daa5bf01d
 bun install --frozen-lockfile
 cd ..
 
@@ -156,24 +151,25 @@ Upload this file using the [installation steps](#quick-start) above. For local d
 
 ### Commands
 
-| Command | What it does |
-| --- | --- |
-| `bun run setup` | Generate the local SDK connection and TypeScript configuration |
-| `bun run typecheck` | Check the project with TypeScript |
-| `bun run lint` | Run ESLint and the host's plugin manifest/source/bundle validation |
-| `bun run test` | Check release version identity and reject malformed build inputs |
-| `bun run build` | Typecheck, bundle through the host SDK, and produce the plugin ZIP |
-| `bun run dev` | Watch source files and sync builds to the local host's uploads directory |
+| Command                  | What it does                                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| `bun run setup`          | Generate the local SDK connection and TypeScript configuration                                     |
+| `bun run typecheck`      | Check the project with TypeScript                                                                  |
+| `bun run lint`           | Run ESLint and the host's plugin manifest/source/bundle validation                                 |
+| `bun run test`           | Test content conversion, generation lifecycle, discovery files, integrations, and release identity |
+| `bun run build`          | Typecheck, bundle through the host SDK, and produce the plugin ZIP                                 |
+| `bun run verify:sandbox` | Execute the built ZIP contract inside the host QuickJS sandbox                                     |
+| `bun run dev`            | Watch source files and sync builds to the local host's uploads directory                           |
 
 SDK commands refresh the local connection. Run `setup` after cloning or changing host locations so your editor can resolve the generated TypeScript configuration. The release version tests run independently of the host checkout.
 
 ### Configuration
 
-| Environment variable | Default | Purpose |
-| --- | --- | --- |
-| `INSTATIC_DIR` | `../../Instatic`, relative to this project | Select the local host checkout used by the SDK and build CLI |
-| `INSTATIC_UPLOADS_DIR` | `<INSTATIC_DIR>/uploads` | Select the local upload directory used by `dev` |
-| `INSTATIC_PLUGIN_VERSION` | Version from `package.json` | Override the built manifest version; CI supplies a unique alpha version |
+| Environment variable      | Default                                    | Purpose                                                                 |
+| ------------------------- | ------------------------------------------ | ----------------------------------------------------------------------- |
+| `INSTATIC_DIR`            | `../../Instatic`, relative to this project | Select the local host checkout used by the SDK and build CLI            |
+| `INSTATIC_UPLOADS_DIR`    | `<INSTATIC_DIR>/uploads`                   | Select the local upload directory used by `dev`                         |
+| `INSTATIC_PLUGIN_VERSION` | Version from `package.json`                | Override the built manifest version; CI supplies a unique alpha version |
 
 For a different checkout location:
 
@@ -196,22 +192,22 @@ Set these variables in your shell or local Bun environment configuration. Enviro
 
 ### Automated builds and alpha releases
 
-The [GitHub Actions workflow](.github/workflows/ci-release.yml) runs on pull requests targeting `main`, every update to `main` (including documentation changes), and manual dispatch.
+The [GitHub Actions workflow](.github/workflows/ci-release.yml) runs on pull requests (including stacked branches), every update to `main` (including documentation changes), and manual dispatch.
 
-| Trigger | Result after validation passes |
-| --- | --- |
-| Pull request | Downloadable ZIP build artifact, retained for 14 days |
-| Update to `main` | New GitHub **prerelease** with the validated plugin ZIP |
-| Manual run on `main` | New alpha prerelease for that commit |
-| Manual run on another branch | Build artifact for testing |
+| Trigger                      | Result after validation passes                          |
+| ---------------------------- | ------------------------------------------------------- |
+| Pull request                 | Downloadable ZIP build artifact, retained for 14 days   |
+| Update to `main`             | New GitHub **prerelease** with the validated plugin ZIP |
+| Manual run on `main`         | New alpha prerelease for that commit                    |
+| Manual run on another branch | Build artifact for testing                              |
 
-Each run installs locked dependencies, uses Bun `1.4.2` and a pinned Instatic SDK revision, runs lint and release-version tests, typechecks and builds the actual plugin ZIP, and verifies the archive. Failed validation prevents publication. Third-party Actions are pinned to commit SHAs.
+Each run installs locked dependencies, uses Bun `1.4.2` and a pinned Instatic SDK revision, runs lint and behavioral/release-version tests, typechecks and builds the actual plugin ZIP, verifies its QuickJS activation and output contracts, and checks the archive. Failed validation prevents publication. Third-party Actions are pinned to commit SHAs.
 
 Release versions use the package's base version, the workflow run number, and the commit's short SHA. For example:
 
 ```text
-Plugin version: 0.1.0-alpha.42.gabcdef0
-Git tag:        v0.1.0-alpha.42.gabcdef0
+Plugin version: 0.2.0-alpha.42.gabcdef0
+Git tag:        v0.2.0-alpha.42.gabcdef0
 ```
 
 The tag and ZIP manifest identify the same version. Re-running a completed workflow preserves an existing release and its assets; a new workflow run gets a new version. Alpha releases are labeled **unofficial**, marked as prereleases, and never promoted to GitHub's latest stable release.
@@ -226,13 +222,13 @@ Automation uses GitHub's built-in token; no custom release secret is required. O
 
 ### Troubleshooting
 
-| Symptom | Check |
-| --- | --- |
-| Missing host checkout or SDK | Set `INSTATIC_DIR` to the host source checkout and install its dependencies with Bun |
-| Editor cannot resolve `#instatic-sdk` or the TypeScript configuration | Run `bun run setup` from this project |
-| Packaging cannot start `zip` | Make the `zip` command available on your development machine |
-| Development sync does not activate the plugin | Install the ZIP and approve permissions first, then activate it in the local host |
-| Status endpoint returns an authorization error | Sign in with an account that has `plugins.read`; verify the plugin's `cms.routes` grant |
+| Symptom                                                               | Check                                                                                            |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Missing host checkout or SDK                                          | Set `INSTATIC_DIR` to the host source checkout and install its dependencies with Bun             |
+| Editor cannot resolve `#instatic-sdk` or the TypeScript configuration | Run `bun run setup` from this project                                                            |
+| Packaging cannot start `zip`                                          | Make the `zip` command available on your development machine                                     |
+| Development sync does not activate the plugin                         | Install the ZIP and approve permissions first, then restart the enabled plugin in the local host |
+| Status endpoint returns an authorization error                        | Sign in with an account that has `plugins.read`; verify the plugin's `cms.routes` grant          |
 
 ### Project layout
 
@@ -241,15 +237,19 @@ seo-geo/
 ├── .github/workflows/
 │   └── ci-release.yml        # Validation, packaging, and alpha prereleases
 ├── instatic-plugin.config.ts  # Plugin identity and permission declarations
+├── admin/
+│   └── index.tsx             # Host UI operator app
+├── src/                      # Content, discovery, schema, lifecycle, integrations
 ├── server/
 │   └── index.ts              # QuickJS server entrypoint
 ├── scripts/
 │   ├── plugin.ts             # SDK setup, validation, build, and dev commands
 │   └── release-version.ts    # Unique alpha version from run number and commit
 ├── tests/
-│   └── release-version.test.ts
+│   └── *.test.ts             # Content, lifecycle, integrations, release identity
 ├── docs/
-│   ├── roadmap.md            # Implementation sequence and acceptance criteria
+│   ├── configuration.md      # Setup, typed options, integrations, alpha budgets
+│   ├── roadmap.md            # Completed delivery checklist and acceptance evidence
 │   └── research.md           # Dated primary-source search guidance
 ├── package.json
 ├── bun.lock
@@ -259,11 +259,11 @@ seo-geo/
 
 `.instatic/`, `node_modules/`, `dist/`, and `artifacts/` are generated and ignored. Plugin source imports the SDK through `#instatic-sdk`; the local bridge points to the host's canonical SDK entrypoint.
 
-## Architecture and planned outputs
+## Architecture and outputs
 
 The host remains responsible for public route resolution, published snapshot composition, artifact serving, and publication notifications. The plugin owns SEO rules, schema mappings, content conversion, discovery files, and diagnostics.
 
-The planned publishing flow is:
+The publishing flow is:
 
 ```text
 Published Instatic routes + versioned content
@@ -279,34 +279,41 @@ Published Instatic routes + versioned content
 **Two ZIPs serve different purposes:**
 
 - **Plugin ZIP:** installs the executable plugin through Admin → Plugins.
-- **Content ZIP:** a planned authenticated download of generated Markdown, sitemap files, and canonical URL mappings.
+- **Content ZIP:** an authenticated download of generated Markdown, sitemap files, and canonical URL mappings.
 
-Proposed public outputs include `/sitemap.xml`, `/robots.txt`, `/markdown/<route>/index.md`, and optional `/llms.txt`. Public HTML remains the canonical search-facing representation.
+Public outputs include `/sitemap.xml`, `/robots.txt`, `/markdown/<route>/index.md`, and optional `/llms.txt`. Public HTML remains the canonical search-facing representation.
 
-These outputs require host SDK extensions. Existing anonymous plugin endpoints are mounted under `/admin/api/cms/plugins/<id>/runtime/*`; that does not yet provide root discovery-file serving. See [host foundation](docs/roadmap.md#host-foundation).
+The companion host foundation supplies permissioned public-route inventory, raw published HTML, root site routes, revision checks, and published HTML refreshes. See [the delivery checklist](docs/roadmap.md).
 
 ## Permissions and content boundaries
 
-The current [manifest configuration](instatic-plugin.config.ts) requests only **`cms.routes`**. The status route is authenticated and capability-gated. The scaffold reads no CMS content, changes no entries, publishes nothing, and requests no outbound network access.
+The [manifest](instatic-plugin.config.ts) requests the grants consumed by the implemented features:
 
-As features are implemented, permissions will be added only when a real feature uses them. Table access will remain explicit and subject to the host's granted permissions.
+| Permissions                                          | Purpose                                                                      |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `cms.publication.read`                               | Raw HTML and inventory of actual published routes                            |
+| `cms.routes`, `cms.routes.public`, `cms.routes.site` | Authenticated operations and public root discovery files                     |
+| `cms.hooks`, `cms.storage`, `cms.schedule`           | HTML enrichment, staged exports, and automatic synchronization               |
+| `admin.navigation`, `editor.code`                    | The admin app with the host's UI primitives                                  |
+| `network.outbound`                                   | Optional IndexNow, Google, and Bing calls, restricted to four declared hosts |
 
-The planned public-content contract is:
+The plugin does not require CMS write/publish/delete permissions. It refreshes existing public HTML through the host; it never publishes a draft. Collection exports are explicitly allowlisted in configuration, defaulting to `posts`. Raw private cells and definition trees are not part of the publication interface.
 
-- Read the **published version**, including its published templates, layouts, and Visual Components.
-- Keep drafts, preview branches, private fields, and personalized fragments out of public exports.
-- Retract outputs when content is unpublished or removed.
-- Keep metadata and schema consistent with visible page content.
-- Preserve the last valid generation when rebuilding fails, while respecting current publication eligibility.
+- Public exports are checked against current publication and configuration on every request.
+- Failed rebuilds retain the last valid generation while retracting ineligible routes immediately.
+- Schema describes authored facts and visible content; diagnostics explain absent bylines, FAQs, and entity details.
+- Google/Bing credentials are encrypted secret settings and stay server-side. Reports measure supported search metrics, not universal AI citations.
+
+The alpha supports 1 MiB input HTML per page, 24 MiB staged document data, and 16 MiB uncompressed content per ZIP. Sitemaps partition at the protocol's 50,000-URL/50-MiB limits. Read [the operational details](docs/configuration.md#outputs-and-alpha-budgets).
 
 Use disposable local data for development and smoke tests. Local accounts, databases, uploads, and generated screenshots are not included in this repository or distributed plugin packages.
 
 ## SEO and GEO expectations
 
-The project follows provider guidance and records it in [research.md](docs/research.md), checked on **October 5, 2026**.
+The project follows provider guidance and records it in [research.md](docs/research.md), checked on **October 5–6, 2026**.
 
 - Google AI search uses ordinary search eligibility; special AI files or special Schema.org markup are not required. [Google guidance](https://developers.google.com/search/docs/appearance/ai-features)
-- Google ignores `llms.txt` for visibility and rankings. Its planned support here is an interoperability feature. [AI optimization guide](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide)
+- Google ignores `llms.txt` for visibility and rankings. Its support here is an interoperability feature. [AI optimization guide](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide)
 - `FAQPage` remains Schema.org vocabulary, but Google retired FAQ rich results in May 2026. [Google updates](https://developers.google.com/search/updates)
 - Structured data must reflect real content; authors, reviews, dates, and answers must not be invented. [Structured-data policies](https://developers.google.com/search/docs/appearance/structured-data/sd-policies)
 
@@ -314,19 +321,16 @@ Measure crawling, indexing, organic traffic, conversions, and observed AI citati
 
 ## Roadmap and contributing
 
-The next milestone is intentionally concrete: **one page and one templated article**, each producing matching Markdown, canonical metadata, sitemap entries, and Article JSON-LD. Unpublished edits must stay private, and unpublishing must remove generated public content.
-
-After the host foundation and first content slice, the roadmap expands into publication checks, redirects, shared identity profiles, internal-link assistance, and optional integrations.
-
+The planned feature checklist is implemented and covered by alpha tests. See the [delivery checklist](docs/roadmap.md) for the source modules and acceptance evidence. The next work should be driven by reported bugs and measured behavior in compatible self-hosted installations.
 Before contributing:
 
-1. Read the [roadmap](docs/roadmap.md) and [research](docs/research.md).
+1. Read the [roadmap](docs/roadmap.md), [configuration](docs/configuration.md), and [research](docs/research.md).
 2. Open an [issue](https://github.com/flyingwebie/instatic-seo-geo/issues) for a proposal or bug report. Keep example content public or synthetic.
 3. Use a feature branch and a pull request with a clear problem statement and verification results.
 4. Run `bun run lint`, `bun run test`, and `bun run build`. Add meaningful tests as functional behavior is implemented.
 5. Keep host SDK changes in the Instatic repository and link the corresponding plugin work.
 
-The automated tests cover release identity and malformed build inputs. The scaffold has also been checked with TypeScript, ESLint, SDK validation, ZIP integrity checks, and direct activation/route checks in the host's QuickJS VM, including rejection without the required permission. Functional SEO tests will accompany implementation of the planned features.
+Behavioral tests cover content conversion, metadata/schema, eligibility, transactional generation, redirects, crawler policies, hreflang, specialized entities, provider parsing, retries, and credential-safe failures. `bun run verify:sandbox` executes the built package in the actual host QuickJS VM, including activation, permission rejection, generation, discovery files, binary ZIP, and retraction. Provider tests use synthetic responses; no live credentials or network submissions are required.
 
 ## License and relationship to Instatic
 

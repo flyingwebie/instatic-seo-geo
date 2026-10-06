@@ -31,6 +31,15 @@ await Bun.write(join(generatedDir, 'sdk.ts'), [
 await Bun.write(join(generatedDir, 'tsconfig.json'), JSON.stringify({
   extends: hostTsconfig,
   compilerOptions: {
+    paths: {
+      ...Object.fromEntries(['core', 'modules', 'ui', 'admin'].map((name) => [`@${name}/*`, [join(instaticDir, 'src', name, '*')]])),
+      '@site/*': [join(instaticDir, 'src/admin/pages/site/*')],
+      '@content/*': [join(instaticDir, 'src/admin/pages/content/*')],
+      '@plugins/*': [join(instaticDir, 'src/admin/pages/plugins/*')],
+      '@users/*': [join(instaticDir, 'src/admin/pages/users/*')],
+      '@instatic/host-ui': [join(instaticDir, 'src/admin/plugin-host-ui/index.ts')],
+      '@instatic/host-hooks': [join(instaticDir, 'src/admin/plugin-host-hooks/index.ts')],
+    },
     types: ['bun', 'vite/client'],
     typeRoots: [
       join(projectDir, 'node_modules/@types'),
