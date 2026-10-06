@@ -74,21 +74,9 @@ See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependenc
 
 For an existing deployment, update its Instatic source or container image, rebuild the server and admin assets, restart/redeploy it, and reload the admin page before uploading. Follow the host's [deployment guide](https://github.com/flyingwebie/Instatic/blob/main/docs/deployment/README.md) for your installation method. Merging a host PR or rebuilding only the plugin does not update a running Instatic installation.
 
-For Docker/Coolify, build from `flyingwebie/Instatic` with those commits, or select an image built from that source. The host's default Compose templates point to `ghcr.io/corebunch/instatic:latest`; check the selected image's source revision before deploying. The changes merged into this fork are not automatically included in an upstream image.
+For Docker/Coolify, use the fork-specific `docker-compose.coolify.flyingwebie.yml` template delivered in [host PR #9](https://github.com/flyingwebie/Instatic/pull/9). It pulls `ghcr.io/flyingwebie/instatic:latest`; the host release workflow builds and publishes that image when a version tag is pushed. Publish a fresh fork core release containing the required SDK changes before redeploying. Merging source changes into `main` alone does not update the image's `latest` tag.
 
-For an existing Coolify **Docker Compose** resource, replace only the Instatic service's `image:` line with this pinned build block. Retain the service's environment, volumes, domain, health check, and database configuration, including its existing secret key:
-
-```yaml
-services:
-  instatic:
-    build:
-      context: "https://github.com/flyingwebie/Instatic.git#7f605592f9e3d72731bd82c249e867318a570853"
-      dockerfile: Dockerfile
-      args:
-        INSTATIC_REVISION: "7f605592f9e3d72731bd82c249e867318a570853"
-```
-
-This is a partial service definition, not a replacement for the whole Compose file. Docker builds the server and admin assets from the selected host commit. In Coolify, edit the saved Compose definition for a user-defined Service; for a Git-based Application, commit the same change to its Compose source file. Save/validate and redeploy the existing resource, then reload **Admin → Plugins** and upload the ZIP. See [Coolify's Compose guide](https://coolify.io/docs/applications/builds/docker-compose) and [Docker's Git build contexts](https://docs.docker.com/build/concepts/context/#git-repositories).
+Load the new template into the existing Postgres Coolify resource, retaining its service names, volumes, environment, domain and secret key. Set any existing `INSTATIC_IMAGE` override to `ghcr.io/flyingwebie/instatic:latest` or the published fork version tag. Save the definition and use **Pull Latest Images & Restart**, then reload **Admin → Plugins** and upload the same ZIP. See [Coolify's Compose guide](https://coolify.io/docs/services/configuration/docker-compose) and the [host deployment guide](https://github.com/flyingwebie/Instatic/blob/main/docs/deployment/coolify.md).
 
 **Download → upload → confirm → generate.** Installation requires an account allowed to install/configure plugins.
 
