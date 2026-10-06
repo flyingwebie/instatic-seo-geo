@@ -78,6 +78,10 @@ export const SpecializedSchema = Type.Union([
 ]);
 export const PageOptionsSchema = Type.Object(
   {
+    aioQuestion: Type.Optional(Text),
+    aioAnswer: Type.Optional(Text),
+    snippetAllowed: Type.Optional(Type.Boolean()),
+    maxSnippet: Type.Optional(Type.Integer({ minimum: -1 })),
     title: Type.Optional(Text),
     description: Type.Optional(Text),
     canonical: Type.Optional(HttpUrl),
@@ -119,6 +123,7 @@ export const PageOptionsSchema = Type.Object(
 export type PageOptions = Static<typeof PageOptionsSchema>;
 export const SiteOptionsSchema = Type.Object(
   {
+    aioEnabled: Type.Optional(Type.Boolean()),
     pages: Type.Optional(Type.Record(Type.String(), PageOptionsSchema)),
     profiles: Type.Optional(Type.Array(ProfileSchema)),
     publisher: Type.Optional(Type.String()),
@@ -176,10 +181,51 @@ export function validate<T extends TSchema>(
   path = "data",
 ): Static<T> {
   if (!Value.Check(schema, input)) {
-    const issue = [...Value.Errors(schema, input)][0];
+    let issue = Value.Errors(schema, input).First();
+    if (
+      issue &&
+      Array.isArray(issue.schema.anyOf) &&
+      typeof issue.value === "object" &&
+      issue.value &&
+      "type" in issue.value
+    ) {
+      const discriminator = issue.value.type;
+      const variant = issue.schema.anyOf.find(
+        (candidate: TSchema) =>
+          candidate.properties?.type?.const === discriminator,
+      );
+      if (variant) {
+        const detail = Value.Errors(variant, issue.value).First();
+        if (detail) issue = { ...detail, path: issue.path + detail.path };
+      }
+    }
+    const patternHints: Record<string, string> = {
+      language: "Enter a language tag such as en-IE, fr or x-default",
+      url: "Enter a complete HTTP(S) URL, for example https://example.com/about",
+      image:
+        "Enter a complete image URL, for example https://example.com/uploads/photo.jpg",
+      canonical:
+        "Enter a complete canonical URL, for example https://example.com/services",
+      thumbnailUrl:
+        "Enter a complete thumbnail URL, for example https://example.com/uploads/video.jpg",
+      contentUrl:
+        "Enter a complete video file URL, for example https://example.com/uploads/video.mp4",
+      embedUrl:
+        "Enter a complete video player URL, for example https://www.youtube.com/embed/VIDEO_ID",
+      price:
+        "Enter a decimal price without a currency symbol, for example 249.00",
+      currency: "Enter a three-letter uppercase currency code, for example EUR",
+      duration: "Enter an ISO duration, for example PT3M20S",
+      id: "Use letters, digits, underscores or hyphens for an advanced profile ID",
+    };
     throw new ConfigurationError(
       path + (issue?.path ?? ""),
-      issue?.message ?? "Invalid value",
+      issue?.schema.pattern
+        ? (patternHints[issue.path.split("/").pop() ?? ""] ??
+            "Enter a valid value using the field’s example")
+        : issue?.message === "Expected union value"
+          ? "Choose one of the supported values shown in the form"
+          : (issue?.message ?? "Invalid value"),
     );
   }
   return input;
@@ -196,6 +242,20 @@ export function parseOptions(raw: string): SiteOptions {
     );
   }
   const options = validate(SiteOptionsSchema, value, "options");
+  const required = (text: string, path: string) => {
+    if (!text.trim())
+      throw new ConfigurationError(
+        path,
+        "Fill in this required field or remove the unused entry",
+      );
+  };
+  const profileIds = new Set<string>();
+  for (const profile of options.profiles ?? []) {
+    required(profile.name, "Business & authors / Name");
+    if (profileIds.has(profile.id))
+      throw new ConfigurationError("profiles", "Profile IDs must be unique");
+    profileIds.add(profile.id);
+  }
   const httpUrl = (raw: string) => {
     try {
       const url = new URL(raw);
@@ -235,6 +295,12 @@ export function parseOptions(raw: string): SiteOptions {
     to: normalizePath(entry.to),
   }));
   for (const page of Object.values(options.pages ?? {})) {
+    for (const faq of page.faqs ?? []) {
+      required(faq.question, "Pages / FAQ question");
+      required(faq.answer, "Pages / Published FAQ answer");
+    }
+    for (const crumb of page.breadcrumbs ?? [])
+      required(crumb.name, "Pages / Breadcrumb label");
     for (const url of [page.canonical, page.image]) if (url) httpUrl(url);
     for (const crumb of page.breadcrumbs ?? [])
       crumb.path = normalizePath(crumb.path);
@@ -242,6 +308,17 @@ export function parseOptions(raw: string): SiteOptions {
       if (date && Number.isNaN(Date.parse(date)))
         throw new ConfigurationError("dates", "Use a real ISO date");
     for (const schema of page.schemas ?? []) {
+      required(schema.name, `Pages / ${schema.type} name`);
+      if (schema.type === "LocalBusiness" || schema.type === "Event")
+        required(schema.address, `Pages / ${schema.type} address`);
+      if (schema.type === "Event") {
+        required(schema.startDate, "Pages / Event start date");
+        required(schema.locationName, "Pages / Event venue name");
+      }
+      if (schema.type === "VideoObject") {
+        required(schema.description, "Pages / Video description");
+        required(schema.uploadDate, "Pages / Video upload date");
+      }
       for (const [key, value] of Object.entries(schema))
         if (
           ["image", "thumbnailUrl", "contentUrl", "embedUrl"].includes(key) &&

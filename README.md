@@ -1,4 +1,4 @@
-<h1 align="center">Instatic SEO &amp; GEO</h1>
+<h1 align="center">Instatic SEO, GEO &amp; AIO</h1>
 
 <p align="center">
   Make your published content easier to find, understand, and reuse.
@@ -24,7 +24,7 @@
 
 ---
 
-An independently developed plugin for [Instatic](https://github.com/flyingwebie/Instatic), the self-hosted visual CMS. The project brings together **search engine optimization (SEO)**, **generative engine optimization (GEO)**, and **machine-readable content publishing** in one installable ZIP.
+An independently developed plugin for [Instatic](https://github.com/flyingwebie/Instatic), the self-hosted visual CMS. The project brings together **search engine optimization (SEO)**, **generative engine optimization (GEO)**, **AI Overview optimization (AIO)**, and **machine-readable content publishing** in one installable ZIP.
 
 The intended workflow is straightforward: publish your website, then generate accurate metadata, structured data, Markdown, and discovery files from the same published content.
 
@@ -48,34 +48,40 @@ These are product goals. A plugin can improve technical readiness; it cannot gua
 
 ## Features and status
 
-| Capability          | Scope                                                                                 | Status                 |
-| ------------------- | ------------------------------------------------------------------------------------- | ---------------------- |
-| Standalone project  | Bun tooling, strict TypeScript, ESLint, and local SDK setup                           | ✅ Available           |
-| ZIP packaging       | Host CLI produces a manifest and a self-contained server bundle                       | ✅ Available           |
-| Sandbox entrypoint  | QuickJS activation and a `plugins.read`-gated status endpoint                         | ✅ Available           |
-| Release automation  | PR validation and ZIP artifacts; alpha prereleases after successful updates to `main` | ✅ Configured          |
-| Markdown publishing | Published pages, articles, and explicitly allowlisted public collection entries       | ✅ Implemented · alpha |
-| XML sitemaps        | Canonical HTML routes, meaningful modification dates, partitioning                    | ✅ Implemented · alpha |
-| SEO metadata        | Titles, descriptions, canonical/robots controls, and social previews                  | ✅ Implemented · alpha |
-| Schema.org          | Site/page identity, publishers, articles, visible FAQs, and breadcrumbs               | ✅ Implemented · alpha |
-| Content ZIP export  | Markdown, sitemap files, and a file-to-canonical-URL manifest                         | ✅ Implemented · alpha |
-| Publication checks  | Indexability preflight and HTML/Markdown/schema consistency                           | ✅ Implemented · alpha |
-| Redirects and links | URL-change handling, orphan-page detection, and link suggestions                      | ✅ Implemented · alpha |
-| GEO discovery       | Separate search/training preferences and optional `llms.txt`                          | ✅ Implemented · alpha |
-| Extended support    | IndexNow, multilingual validation, specialized schema, visibility reports             | ✅ Implemented · alpha |
+| Capability             | Scope                                                                                         | Status                 |
+| ---------------------- | --------------------------------------------------------------------------------------------- | ---------------------- |
+| Standalone project     | Bun tooling, strict TypeScript, ESLint, and local SDK setup                                   | ✅ Available           |
+| ZIP packaging          | Host CLI produces a manifest and a self-contained server bundle                               | ✅ Available           |
+| Sandbox entrypoint     | QuickJS activation and a `plugins.read`-gated status endpoint                                 | ✅ Available           |
+| Release automation     | PR validation and ZIP artifacts; alpha prereleases after successful updates to `main`         | ✅ Configured          |
+| Markdown publishing    | Published pages, articles, and explicitly allowlisted public collection entries               | ✅ Implemented · alpha |
+| XML sitemaps           | Canonical HTML routes, meaningful modification dates, partitioning                            | ✅ Implemented · alpha |
+| SEO metadata           | Titles, descriptions, canonical/robots controls, and social previews                          | ✅ Implemented · alpha |
+| Schema.org             | Site/page identity, publishers, articles, visible FAQs, and breadcrumbs                       | ✅ Implemented · alpha |
+| Content ZIP export     | Markdown, sitemap files, and a file-to-canonical-URL manifest                                 | ✅ Implemented · alpha |
+| Publication checks     | Indexability preflight and HTML/Markdown/schema consistency                                   | ✅ Implemented · alpha |
+| Redirects and links    | URL-change handling, orphan-page detection, and link suggestions                              | ✅ Implemented · alpha |
+| GEO discovery          | Separate search/training preferences and optional `llms.txt`                                  | ✅ Implemented · alpha |
+| Guided configuration   | Toggles, page selection, profiles, FAQs, schemas, redirects, languages and crawler forms      | ✅ Implemented · alpha |
+| AIO publication review | Local search/snippet checks, visible answer passages, topic headings, sources and attribution | ✅ Implemented · alpha |
+| Extended support       | IndexNow, multilingual validation, specialized schema, visibility reports                     | ✅ Implemented · alpha |
 
 See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependencies, and acceptance criteria.
 
 ## Quick start
 
-The functional alpha is delivered in [plugin PR #3](https://github.com/flyingwebie/instatic-seo-geo/pull/3) and needs [Instatic host PR #8](https://github.com/flyingwebie/Instatic/pull/8). Until the feature PRs are merged, build the plugin's `feat/seo-geo-publishing` branch with the pinned host commit below; existing scaffold releases do not contain these features. [Release automation PR #2](https://github.com/flyingwebie/instatic-seo-geo/pull/2) is the parent of this plugin feature branch.
+The **0.3 alpha** adds guided configuration and AIO publication checks. Download the matching build from the PR artifacts while it is under review; after merge, GitHub Actions publishes a new alpha prerelease automatically.
 
-**Download → upload → confirm → generate.** Installation requires the compatible Instatic publication SDK build and an account allowed to install/configure plugins. Plugin API `1` alone does not indicate support for the new permissions: older hosts reject this package. Use the pinned host revision in the build instructions below until the host foundation is merged.
+**Download → upload → configure → generate.** Use an Instatic build containing the publication SDK and the PostgreSQL plugin JSON storage fix in [host PR #12](https://github.com/flyingwebie/Instatic/pull/12). That fix is prepared for **Instatic 0.0.23**; it is not a published release while the PR remains open. This plugin's CI and source-build instructions pin the tested host commit. Plugin API `1` alone does not prove host compatibility.
 
 1. Open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download **`seo-geo.plugin.zip`** from a prerelease.
 2. In Instatic, open **Admin → Plugins** and upload that ZIP.
 3. Review and approve the requested permissions, then confirm installation. Instatic validates, installs, and activates the plugin.
-4. Open **SEO & GEO**, enter your public website origin, and click **Save & generate**. Optional provider credentials live in the plugin Settings panel.
+4. Open **SEO, GEO & AIO → Website** and enter the domain serving your public pages, such as `https://www.example.com`. It can differ from your admin domain.
+5. Use **Pages**, **Business & authors**, **Redirects**, **Languages**, **Crawlers** and **AIO** to enable features and complete labelled fields with example placeholders. Published page choices load before the first generation. Custom metadata is optional.
+6. Click **Save & generate**. Review publication findings and the per-page AIO checks. Optional provider credentials live in the plugin Settings panel.
+
+No JSON is needed for everyday setup. **Show advanced configuration JSON** provides an optional import/edit view with explicit Apply and Discard actions. Existing settings are retained; invalid stored configuration is surfaced for correction.
 
 The ZIP contains the plugin manifest and bundled code. Bun, Git, and the SDK checkout are development tools used to build the package from source. Keep the ZIP intact when uploading it.
 
@@ -97,6 +103,12 @@ The response identifies the unofficial alpha version and reports configuration, 
 - Optional `/llms.txt` and the IndexNow ownership key file.
 
 **Download content ZIP** exports Markdown, sitemap files, and a canonical URL manifest. Published HTML stays authoritative.
+
+## AIO without ranking promises
+
+[Google's AI search guidance](https://developers.google.com/search/docs/appearance/ai-features) says AI Overviews and AI Mode use the same SEO foundations, with no extra technical requirements, special AI schema or required AI text file. Supporting links need to be indexed and eligible to display a snippet. Local checks cannot establish actual search indexing or guarantee selection.
+
+The plugin preserves authored snippet and preview directives. Guided page controls can override generic snippet preferences, while crawler-specific metadata and `data-nosnippet` remain in place. Optional question/answer fields compare your editorial brief against published headings and paragraphs; they never insert hidden answers. Source counts and answer-length checks are clearly labelled heuristics, rather than a ranking score. Search Console's Web reports include AI feature traffic without isolating every AI citation.
 
 ## Development
 
@@ -124,7 +136,7 @@ From your workspace directory:
 ```sh
 git clone https://github.com/flyingwebie/Instatic.git Instatic
 cd Instatic
-git checkout a509ecfb7a922a9ba7b3b9c94d1a917daa5bf01d
+git checkout 9314b201268baffc74de35dd149688964d666f39
 bun install --frozen-lockfile
 cd ..
 
@@ -206,8 +218,8 @@ Each run installs locked dependencies, uses Bun `1.4.2` and a pinned Instatic SD
 Release versions use the package's base version, the workflow run number, and the commit's short SHA. For example:
 
 ```text
-Plugin version: 0.2.0-alpha.42.gabcdef0
-Git tag:        v0.2.0-alpha.42.gabcdef0
+Plugin version: 0.3.0-alpha.42.gabcdef0
+Git tag:        v0.3.0-alpha.42.gabcdef0
 ```
 
 The tag and ZIP manifest identify the same version. Re-running a completed workflow preserves an existing release and its assets; a new workflow run gets a new version. Alpha releases are labeled **unofficial**, marked as prereleases, and never promoted to GitHub's latest stable release.

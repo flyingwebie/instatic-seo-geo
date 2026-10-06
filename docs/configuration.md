@@ -1,13 +1,44 @@
 # Configuration guide
 
-This is an **unofficial alpha-test plugin**. Install the plugin ZIP into the compatible Instatic build, open **SEO & GEO**, enter your public website origin (for example `https://example.com`), and click **Save & generate**. The origin is required because self-hosted Instatic does not have one authoritative public domain.
+This is an **unofficial alpha-test plugin**. Install the ZIP on the tested compatible host, then open **SEO, GEO & AIO**. Everyday setup uses labelled fields, switches and example placeholders; no JSON is required.
+
+## Guided setup
+
+1. **Website:** enter the public website origin, for example `https://www.example.com`. Use the domain serving public pages, even if administration runs on another subdomain. Select optional `llms.txt` and add public collection table slugs one per line. Blank collections use `posts`.
+2. **Pages:** select a published page or add a site-relative path such as `/services/web-design`. Enable **Custom page metadata** only to override published values. Blank optional fields preserve published metadata. Choose indexing, following and snippet preferences separately.
+3. **Business & authors:** add real people or organisations with names, profile URLs, logos/portraits and official social links. Select the website publisher. Then select visible article authors in **Pages**; profile IDs are managed automatically.
+4. **Pages → structured data:** choose Article/BlogPosting/NewsArticle as appropriate. Enable FAQs and copy their visible questions/answers. Automatic breadcrumbs work by default; custom breadcrumbs and Product/Event/LocalBusiness/VideoObject have guided fields. Required facts must appear on the page. [Google retired FAQ rich results in May 2026](https://developers.google.com/search/updates#may-2026); FAQ schema remains a semantic description of visible content.
+5. **Redirects:** enable the section and add old/new paths with a permanent 301 or 308 response. The destination must be published and eligible.
+6. **Languages:** group the published versions of the same content. Enter paths and language tags, such as `/services` + `en-IE`, and `/fr/services` + `fr`. Set matching page languages in **Pages**.
+7. **Crawlers:** choose search, training and user-requested retrieval access independently. Training is disabled by default. Excluded paths remove discovery exports; they do not make HTML private or automatically add `noindex`. For search removal, set the page's indexing preference deliberately.
+8. **AIO:** enable local publication checks. In **Pages**, optionally enter the primary question/topic and copy a preferred answer paragraph already published in the CMS.
+9. Click **Save settings** to store configuration, or **Save & generate** to update discovery outputs and published HTML. The foreground pause button stops further browser batches after the current request. Automatic background processing may continue. Progress distinguishes document generation from HTML refresh, and unchanged configurations resume saved work.
+
+Missing required values or malformed URLs/paths/dates are shown before saving. The advanced JSON view has explicit **Apply JSON changes** and **Discard JSON draft** buttons; an unapplied draft blocks saving. If existing JSON is invalid, it is preserved for correction instead of being replaced with defaults.
+
+Provider credentials are optional and remain in the host's plugin Settings panel. Basic discovery generation needs none of them.
+
+## AIO checks and snippet controls
+
+AIO means AI Overview optimisation here. [Google's documentation](https://developers.google.com/search/docs/appearance/ai-features) states that existing SEO best practices apply to AI Overviews/AI Mode, with no special Schema.org type or extra AI text file required. Supporting links must be indexed and eligible for snippets; the plugin cannot verify actual indexing or guarantee an AI citation.
+
+The per-page review checks local canonical/indexing/crawler/snippet controls, a readable answer paragraph, topic headings, external source links, and visible configured authors with publication dates. The default answer candidate length of 40–600 characters is an editorial heuristic, not a search engine requirement. External links do not prove source quality. Missing bylines or sources may be reasonable for some page types; review the advice in context.
+
+`aioEnabled` defaults to enabled. Per-page `aioQuestion` and `aioAnswer` are editorial briefs only: they never add text or AI-specific schema. A preferred answer must occur in a snippet-accessible visible paragraph; hidden content, request-dependent holes and `data-nosnippet` passages are excluded from answer candidates.
+
+Per-page `snippetAllowed` can explicitly set/remove generic `nosnippet`; allowing snippets also removes an inherited generic `max-snippet` limit unless you supply a new `maxSnippet`. `maxSnippet` accepts a whole number: `-1` means unlimited, `0` disables text snippets, and positive values cap length. Omit these fields to preserve authored controls. Existing crawler-specific metadata, `data-nosnippet`, preview, archive and expiration directives remain intact. Local checks inspect published HTML and this plugin’s crawler preferences; they do not verify deployment-level HTTP headers or actual crawler access. A blocked snippet check does not automatically remove an otherwise indexable canonical page from the sitemap.
+
+After upgrading from a prior plugin generation format, generate again to refresh reports and exports. AIO reports appear only for the current completed generation. Search Console's Web totals include AI feature traffic; they do not provide a universal AI citation count.
+
+## Advanced configuration reference
 
 Published pages are included automatically. Collection entries default to the public `posts` table; explicitly opt other public tables into `collectionTables`. Templates, layout/component definitions, drafts, preview branches, hidden content, and visitor-specific holes are never content exports. Important content in dynamic fragments produces a diagnostic.
 
-The JSON options field supports this example (use your real names, URLs, content, and dates):
+The optional advanced JSON editor supports this example (use your real names, URLs, content, and dates):
 
 ```json
 {
+  "aioEnabled": true,
   "collectionTables": ["posts", "guides"],
   "searchAllowed": true,
   "trainingAllowed": false,
@@ -31,6 +62,10 @@ The JSON options field supports this example (use your real names, URLs, content
   "pages": {
     "/posts/example": {
       "title": "A useful article title",
+      "aioQuestion": "What does this do?",
+      "aioAnswer": "It describes the visible published content.",
+      "snippetAllowed": true,
+      "maxSnippet": -1,
       "description": "An accurate description of the published article.",
       "articleType": "BlogPosting",
       "authors": ["author"],

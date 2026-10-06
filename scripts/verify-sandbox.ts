@@ -4,7 +4,11 @@ import { pathToFileURL } from "node:url";
 import { Type } from "@sinclair/typebox";
 import { validate } from "../src/config";
 import { fakeHost, document } from "../tests/fixtures";
-import { ProgressSchema, StatusSchema } from "../src/adminSchemas";
+import {
+  PageChoicesSchema,
+  ProgressSchema,
+  StatusSchema,
+} from "../src/adminSchemas";
 
 const hostDir = resolve(process.env.INSTATIC_DIR || "../../Instatic");
 const { createPluginVm } = await import(
@@ -42,6 +46,7 @@ const registrations: string[] = [];
 let sequence = 0;
 let filterId = "";
 const refreshedHtml: string[] = [];
+host.values.googleClientSecret = "disposable-local-secret";
 const env = {
   pluginId: manifest.id,
   manifestVersion: manifest.version,
@@ -57,6 +62,9 @@ const env = {
       args,
     });
     switch (call.target) {
+      case "cms.settings.replace":
+        await host.api.cms.settings.replace(call.args[0]);
+        return null;
       case "cms.routes.register":
         registrations.push(call.args[0].routeKey);
         return null;
@@ -149,11 +157,33 @@ const context = (path: string, method = "GET", body = "") => ({
 try {
   await vm.runLifecycle("activate");
   assert.ok(registrations.includes("SITE:GET:/*"));
+  const choices = validate(
+    PageChoicesSchema,
+    await vm.runRoute("GET:/pages", context("/pages")),
+  );
+  assert.deepEqual(
+    choices.map((page) => page.path),
+    ["/", "/posts/alpha"],
+  );
   const before = validate(
     StatusSchema,
     await vm.runRoute("GET:/status", context("/status")),
   );
   assert.equal(before.generated, 0);
+  const configured = await vm.runRoute(
+    "POST:/configure",
+    context(
+      "/configure",
+      "POST",
+      JSON.stringify({
+        siteUrl: "https://example.com",
+        options: '{"aioEnabled":true}',
+        llmsEnabled: false,
+      }),
+    ),
+  );
+  assert.deepEqual(configured, { ok: true });
+  assert.equal(host.values.googleClientSecret, "disposable-local-secret");
   let progress = validate(
     ProgressSchema,
     await vm.runRoute("POST:/generate", context("/generate", "POST", "{}")),
@@ -179,6 +209,11 @@ try {
       .generated,
     2,
   );
+  const aioStatus = validate(
+    StatusSchema,
+    await vm.runRoute("GET:/status", context("/status")),
+  );
+  assert.ok(aioStatus.pages.every((page) => page.aio?.checks.length === 5));
   const raw = Type.Object({
     __response: Type.Boolean(),
     status: Type.Number(),

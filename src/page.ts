@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { AioReportSchema, auditAio, readRobots, robotsDirectives } from "./aio";
 import type { PublishedDocument, PublishedRoute } from "#instatic-sdk";
 import {
   validate,
@@ -43,6 +44,7 @@ export const GeneratedPageSchema = Type.Object({
   images: Type.Array(Type.Object({ src: Type.String(), alt: Type.String() })),
   schemas: Type.Array(JsonObjectSchema),
   findings: Type.Array(FindingSchema),
+  aio: Type.Optional(AioReportSchema),
 });
 export type GeneratedPage = Static<typeof GeneratedPageSchema>;
 export type PageContext = {
@@ -139,9 +141,7 @@ export function enrichPage(
         ownUrl,
       ownUrl,
     ) ?? ownUrl;
-  const robots = (meta(parsed.head, "robots") ?? "")
-    .toLowerCase()
-    .split(/[,\s]+/);
+  const robots = readRobots(parsed.head);
   const index =
     authored.index ??
     !robots.some((token) => token === "noindex" || token === "none");
@@ -558,6 +558,12 @@ export function enrichPage(
         `Translation route is not published: ${alternate.path}`,
         "Publish the translated page or remove the mapping.",
       );
+  const preservedRobots = robotsDirectives(
+    parsed.head,
+    authored,
+    index,
+    follow,
+  );
   for (const node of elements(parsed.head)) {
     if (
       node.tagName === "title" ||
@@ -569,7 +575,7 @@ export function enrichPage(
           "twitter:title",
           "twitter:description",
           "twitter:image",
-        ].includes(attribute(node, "name") ?? "")) ||
+        ].includes(attribute(node, "name")?.toLowerCase() ?? "")) ||
       (node.tagName === "meta" &&
         (attribute(node, "property") ?? "").startsWith("og:")) ||
       (node.tagName === "link" &&
@@ -578,7 +584,7 @@ export function enrichPage(
     )
       remove(node);
   }
-  let tags = `<title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><meta name="robots" content="${index ? "index" : "noindex"},${follow ? "follow" : "nofollow"}"><link rel="canonical" href="${escapeHtml(canonical)}">`;
+  let tags = `<title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><meta name="robots" content="${escapeHtml(preservedRobots.join(","))}"><link rel="canonical" href="${escapeHtml(canonical)}">`;
   for (const [name, value] of [
     ["og:title", title],
     ["og:description", description],
@@ -717,6 +723,22 @@ export function enrichPage(
       images,
       schemas: graph,
       findings,
+      ...(options.aioEnabled === false
+        ? {}
+        : {
+            aio: auditAio({
+              main: parsed.main,
+              head: parsed.head,
+              origin,
+              options,
+              page: authored,
+              indexable,
+              robots: preservedRobots,
+              links,
+              authorsVisible: visibleAuthors.length > 0,
+              datePublished,
+            }),
+          }),
     },
   };
 }

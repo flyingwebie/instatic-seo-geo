@@ -38,6 +38,18 @@ const plugin: ServerPluginModule = {
         }
       };
     api.cms.routes.get(
+      "/pages",
+      "plugins.read",
+      guarded(async () =>
+        (await service.inventory()).routes.map((route) => ({
+          path: route.path,
+          title: route.title ?? route.path,
+          kind: route.kind,
+          tableSlug: route.tableSlug ?? "",
+        })),
+      ),
+    );
+    api.cms.routes.get(
       "/status",
       "plugins.read",
       guarded(async () => ({
@@ -57,6 +69,8 @@ const plugin: ServerPluginModule = {
           specializedSchema: true,
           indexNow: true,
           visibilityReports: true,
+          aio: true,
+          guidedConfiguration: true,
         },
         ...(await service.status()),
       })),

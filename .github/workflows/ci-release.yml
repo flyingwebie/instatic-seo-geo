@@ -16,7 +16,7 @@ concurrency:
 
 env:
   BUN_VERSION: 1.4.2
-  INSTATIC_REF: a509ecfb7a922a9ba7b3b9c94d1a917daa5bf01d
+  INSTATIC_REF: 9314b201268baffc74de35dd149688964d666f39
 
 jobs:
   validate:

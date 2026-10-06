@@ -76,8 +76,15 @@ export class PublicationService {
   invalidate(): void {
     this.cachedInventory = undefined;
   }
-  configuration(): { origin: string; options: SiteOptions; llms: boolean } {
+  configuration(): {
+    origin: string;
+    options: SiteOptions;
+    llms: boolean;
+    format: number;
+  } {
     return {
+      // Changing generation semantics invalidates exports, including after a plugin upgrade.
+      format: 2,
       origin: siteOrigin(this.api.cms.settings.get("siteUrl") ?? ""),
       options: parseOptions(this.api.cms.settings.get("options") ?? "{}"),
       llms: this.api.cms.settings.get<boolean>("llmsEnabled") === true,
@@ -213,6 +220,7 @@ export class PublicationService {
         canonical: page.canonical,
         indexable: page.indexable,
         lastModified: page.dateModified,
+        ...(page.aio ? { aio: page.aio } : {}),
       })),
     };
   }
@@ -220,7 +228,13 @@ export class PublicationService {
   /** One resumable, serialized batch. The current pointer is committed last. */
   async rebuild(
     force = false,
-  ): Promise<{ done: boolean; offset: number; total: number }> {
+  ): Promise<{
+    done: boolean;
+    offset: number;
+    total: number;
+    phase?: string;
+    refreshed?: number;
+  }> {
     if (this.running)
       throw new Error("A generation batch is already running; retry shortly.");
     this.running = true;
@@ -334,7 +348,13 @@ export class PublicationService {
         await this.save("pending", pending);
       }
       if (pending.offset < allowedRoutes.length)
-        return { done: false, offset: pending.offset, total: pending.total };
+        return {
+          done: false,
+          offset: pending.offset,
+          total: pending.total,
+          phase: "documents",
+          refreshed: pending.htmlOffset,
+        };
       // Re-render only existing published versions, in small batches, before
       // exposing the new export pointer. Drafts never enter this pipeline.
       const refresh = allowedRoutes
@@ -350,7 +370,13 @@ export class PublicationService {
         await this.save("pending", pending);
       }
       if (pending.htmlOffset < allowedRoutes.length)
-        return { done: false, offset: pending.offset, total: pending.total };
+        return {
+          done: false,
+          offset: pending.offset,
+          total: pending.total,
+          phase: "html",
+          refreshed: pending.htmlOffset,
+        };
       const check = validate(
         PublicationListResultSchema,
         await this.api.cms.publication.list({
