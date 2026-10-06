@@ -68,9 +68,17 @@ See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependenc
 
 ## Quick start
 
-The functional alpha is delivered in [plugin PR #3](https://github.com/flyingwebie/instatic-seo-geo/pull/3) and needs [Instatic host PR #8](https://github.com/flyingwebie/Instatic/pull/8). Until the feature PRs are merged, build the plugin's `feat/seo-geo-publishing` branch with the pinned host commit below; existing scaffold releases do not contain these features. [Release automation PR #2](https://github.com/flyingwebie/instatic-seo-geo/pull/2) is the parent of this plugin feature branch.
+### Update Instatic before uploading
 
-**Download → upload → confirm → generate.** Installation requires the compatible Instatic publication SDK build and an account allowed to install/configure plugins. Plugin API `1` alone does not indicate support for the new permissions: older hosts reject this package. Use the pinned host revision in the build instructions below until the host foundation is merged.
+**Deploy the compatible host first.** This plugin requires the publication SDK and permissions added in [Instatic host PR #8](https://github.com/flyingwebie/Instatic/pull/8), now merged into Instatic `main` at `7f605592f9e3d72731bd82c249e867318a570853`. The release is validated against host commit `a509ecfb7a922a9ba7b3b9c94d1a917daa5bf01d`; `build-info.json` records that revision for each ZIP. The running host must include those changes. Plugin API `1` and the host's package version alone do not identify this support.
+
+For an existing deployment, update its Instatic source or container image, rebuild the server and admin assets, restart/redeploy it, and reload the admin page before uploading. Follow the host's [deployment guide](https://github.com/flyingwebie/Instatic/blob/main/docs/deployment/README.md) for your installation method. Merging a host PR or rebuilding only the plugin does not update a running Instatic installation.
+
+For Docker/Coolify, use the fork-specific `docker-compose.coolify.flyingwebie.yml` template delivered in [host PR #9](https://github.com/flyingwebie/Instatic/pull/9). It pulls `ghcr.io/flyingwebie/instatic:latest`; the host release workflow builds and publishes that image when a version tag is pushed. Publish a fresh fork core release containing the required SDK changes before redeploying. Merging source changes into `main` alone does not update the image's `latest` tag.
+
+Load the new template into the existing Postgres Coolify resource, retaining its service names, volumes, environment, domain and secret key. Set any existing `INSTATIC_IMAGE` override to `ghcr.io/flyingwebie/instatic:latest` or the published fork version tag. Save the definition and use **Pull Latest Images & Restart**, then reload **Admin → Plugins** and upload the same ZIP. See [Coolify's Compose guide](https://coolify.io/docs/services/configuration/docker-compose) and the [host deployment guide](https://github.com/flyingwebie/Instatic/blob/main/docs/deployment/coolify.md).
+
+**Download → upload → confirm → generate.** Installation requires an account allowed to install/configure plugins.
 
 1. Open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download **`seo-geo.plugin.zip`** from a prerelease.
 2. In Instatic, open **Admin → Plugins** and upload that ZIP.
@@ -97,6 +105,12 @@ The response identifies the unofficial alpha version and reports configuration, 
 - Optional `/llms.txt` and the IndexNow ownership key file.
 
 **Download content ZIP** exports Markdown, sitemap files, and a canonical URL manifest. Published HTML stays authoritative.
+
+### Installation error: `Invalid plugin manifest: Expected union value`
+
+An older host rejects this plugin's `cms.routes.site` and `cms.publication.read` permissions with this message. Update the running Instatic server and its admin assets using the [host requirements above](#update-instatic-before-uploading), restart/redeploy, reload **Admin → Plugins**, and upload the same release ZIP again.
+
+If the server has already been updated, reload the admin page to load its rebuilt assets. If the error persists, include the plugin release tag, deployed Instatic commit/image identifier, and the response from the package inspection request (`/admin/api/cms/plugins/inspect-package`) in a [bug report](https://github.com/flyingwebie/instatic-seo-geo/issues). Omit cookies, authorization headers, and credentials.
 
 ## Development
 
