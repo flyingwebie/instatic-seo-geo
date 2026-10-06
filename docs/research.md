@@ -83,7 +83,15 @@ Bing's AI Performance public preview reports citations, cited pages, sampled gro
 
 ## Related
 
-- [roadmap.md](roadmap.md) — planned host foundation and plugin implementation.
+- [roadmap.md](roadmap.md) — completed alpha delivery checklist.
 - [Project README](../README.md) — setup, local SDK connection, and ZIP build commands.
 - In the Instatic checkout: `docs/features/plugin-system.md` and `docs/features/publisher.md` describe the existing plugin lifecycle, permissions, published routing, and rendering.
 - External source-of-truth documents are linked beside their claims; this reference defines no Instatic API or new architecture gate.
+
+## Implementation sources checked October 6, 2026
+
+The implemented integrations use the [IndexNow protocol](https://www.indexnow.org/documentation) and [global endpoint/receipt FAQ](https://www.indexnow.org/faq), [Google Search Analytics query API](https://developers.google.com/webmaster-tools/v1/searchanalytics/query), and Bing's [JSON API protocols](https://learn.microsoft.com/en-gb/bingwebmaster/api-protocols), [GetQueryStats method](https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getquerystats?view=bing-webmaster-dotnet), and [QueryStats fields](https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.querystats?view=bing-webmaster-dotnet). Provider reports are limited to returned rows and available retention; missing rows are not measured zeroes.
+
+Independent crawler groups follow [OpenAI's crawler roles](https://developers.openai.com/api/docs/bots) and [Anthropic's crawler roles](https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler). User-triggered fetch behavior may differ from search/training crawlers. Robots directives express preferences and are not authentication.
+
+The crawler defaults keep published CSS, JavaScript, and media accessible. Export exclusions use HTML noindex instead of blocking the page fetch: Google must crawl a page to read that directive. [Google robots meta specifications](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag), [Google content controls](https://developers.google.com/search/docs/crawling-indexing/control-what-you-share).

@@ -1,15 +1,16 @@
 import js from '@eslint/js'
 import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist/', 'artifacts/', '.instatic/']),
   {
-    files: ['**/*.{ts,js}'],
-    extends: [js.configs.recommended, tseslint.configs.recommended],
+    files: ['**/*.{ts,tsx,js}'],
+    extends: [js.configs.recommended, tseslint.configs.recommended, reactHooks.configs.flat.recommended],
     languageOptions: {
-      globals: { ...globals.node, ...globals.builtin, Bun: 'readonly' },
+      globals: { ...globals.node, ...globals.browser, ...globals.builtin, Bun: 'readonly' },
     },
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', {

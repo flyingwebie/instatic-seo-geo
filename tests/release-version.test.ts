@@ -5,7 +5,7 @@ const commitSha = 'abcdef0123456789abcdef0123456789abcdef01'
 
 describe('alpha release identity', () => {
   test('includes the release sequence and source commit in a prerelease version', () => {
-    expect(alphaReleaseVersion('42', commitSha)).toBe('0.1.0-alpha.42.gabcdef0')
+    expect(alphaReleaseVersion('42', commitSha)).toBe('0.2.0-alpha.42.gabcdef0')
   })
 
   test('keeps retries stable and separate runs distinct', () => {

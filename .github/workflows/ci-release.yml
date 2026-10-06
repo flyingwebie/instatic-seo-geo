@@ -2,7 +2,6 @@ name: Validate and release alpha
 
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
@@ -17,7 +16,7 @@ concurrency:
 
 env:
   BUN_VERSION: 1.4.2
-  INSTATIC_REF: f4e692f70d012be82e47c3dce5cf23aec4d573bc
+  INSTATIC_REF: a509ecfb7a922a9ba7b3b9c94d1a917daa5bf01d
 
 jobs:
   validate:
@@ -73,11 +72,14 @@ jobs:
       - name: Lint plugin
         run: bun run lint
 
-      - name: Test release identity
+      - name: Test plugin behavior and release identity
         run: bun run test
 
       - name: Typecheck and build plugin ZIP
         run: bun run build
+
+      - name: Verify built plugin in QuickJS
+        run: bun run verify:sandbox
 
       - name: Verify archive and record build inputs
         run: |
@@ -138,7 +140,9 @@ jobs:
 
           1. Download \`seo-geo.plugin.zip\` from this release.
           2. Open Instatic **Admin → Plugins** and upload the ZIP.
-          3. Review and approve the requested \`cms.routes\` permission, then confirm installation. Instatic installs and activates the plugin.
+          3. Review and approve the declared permissions, then confirm installation. Instatic installs and activates the plugin.
+
+          4. Open the plugin app, set the public website origin, and generate the first export.
 
           \`SHA256SUMS\` verifies the package and \`build-info.json\` records its build inputs.
           EOF
