@@ -1,6 +1,6 @@
 {
   "name": "@instatic-plugins/seo-geo",
-  "version": "1.0.0-beta.0",
+  "version": "1.0.0-beta.1",
   "private": true,
   "type": "module",
   "description": "Unofficial beta Instatic plugin for SEO metadata, Schema.org, AI-ready Markdown, sitemaps, analytics tags, search performance charts and generated social images.",

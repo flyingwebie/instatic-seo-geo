@@ -95,7 +95,9 @@ const plugin: ServerPluginModule = {
           ),
           await req.json(),
         );
-        siteOrigin(input.siteUrl);
+        // A blank address is allowed: settings can be saved before setup.
+        input.siteUrl = input.siteUrl.trim();
+        if (input.siteUrl) siteOrigin(input.siteUrl);
         parseOptions(input.options);
         if (input.analytics !== undefined)
           input.analytics = JSON.stringify(validateAnalytics(input.analytics));
