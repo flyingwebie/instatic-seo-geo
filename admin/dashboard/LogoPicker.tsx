@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef, useState } from "react";
 import { Type } from "@sinclair/typebox";
 import { usePluginRoutes } from "@instatic/host-hooks";
 import { Alert, Button, Checkbox, SearchBar, Stack, Text, pushToast } from "@instatic/host-ui";
@@ -78,6 +77,10 @@ export function LogoPicker(props: {
   const [query, setQuery] = useState("");
   const [removeWhite, setRemoveWhite] = useState(false);
   const [working, setWorking] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (open) panelRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [open]);
 
   useEffect(() => {
     if (!open || assets) return;
@@ -116,8 +119,8 @@ export function LogoPicker(props: {
   return (
     <Stack gap={8}>
       <Stack direction="row" gap={8} wrap align="center">
-        <Button variant="secondary" size="sm" disabled={props.disabled || working} onClick={() => setOpen(true)}>
-          {props.logo ? "Change logo" : "Choose from media library"}
+        <Button variant="secondary" size="sm" disabled={props.disabled || working} onClick={() => setOpen(!open)}>
+          {open ? "Hide media library" : props.logo ? "Change logo" : "Choose from media library"}
         </Button>
         <label
           style={{
@@ -154,106 +157,83 @@ export function LogoPicker(props: {
         onChange={setRemoveWhite}
       />
       {props.logo && <Text variant="muted">Using {props.logo.name}</Text>}
-      {open &&
-        createPortal(
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Choose a logo"
-            onClick={(event) => event.target === event.currentTarget && setOpen(false)}
-            onKeyDown={(event) => event.key === "Escape" && setOpen(false)}
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 1000,
-              background: "rgb(0 0 0 / 0.55)",
-              display: "grid",
-              placeItems: "center",
-              padding: 24,
-            }}
-          >
-            <div
-              style={{
-                width: "min(880px, 100%)",
-                maxHeight: "min(720px, 100%)",
-                display: "grid",
-                gridTemplateRows: "auto auto 1fr",
-                gap: 12,
-                background: "var(--bg-surface)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius)",
-                padding: 20,
-                boxShadow: "0 24px 64px rgb(0 0 0 / 0.4)",
-              }}
-            >
-              <Stack direction="row" justify="between" align="center">
-                <span style={{ fontSize: "var(--text-l)", color: "var(--text-bright)", fontWeight: 600 }}>
-                  Choose a logo
-                </span>
-                <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-                  Close
-                </Button>
-              </Stack>
-              <SearchBar value={query} onChange={setQuery} placeholder="Search images" />
-              <div style={{ overflowY: "auto", minHeight: 200 }}>
-                {error ? (
-                  <Alert tone="warning" title="Media library unavailable">
-                    {error} Use “Upload from computer” instead.
-                  </Alert>
-                ) : !assets ? (
-                  <Text variant="muted">Loading images…</Text>
-                ) : !shown.length ? (
-                  <Text variant="muted">No images found. Upload your logo in Media first, or upload it from your computer.</Text>
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
-                    {shown.map((asset) => (
-                      <button
-                        key={asset.id}
-                        type="button"
-                        disabled={working}
-                        onClick={() => void use(asset.url, asset.name)}
-                        title={asset.name}
-                        style={{
-                          display: "grid",
-                          gap: 6,
-                          padding: 8,
-                          border: "1px solid var(--border)",
-                          borderRadius: "var(--radius-sm)",
-                          // Checkerboard shows transparency.
-                          background:
-                            "repeating-conic-gradient(var(--bg-surface-3) 0 25%, var(--bg-surface-2) 0 50%) 50% / 16px 16px",
-                          cursor: working ? "wait" : "pointer",
-                          color: "var(--text)",
-                        }}
-                      >
-                        <img
-                          src={asset.thumb}
-                          alt=""
-                          loading="lazy"
-                          style={{ width: "100%", height: 90, objectFit: "contain" }}
-                        />
-                        <span
-                          style={{
-                            fontSize: "var(--text-xs)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            background: "var(--bg-surface)",
-                            borderRadius: 4,
-                            padding: "2px 4px",
-                          }}
-                        >
-                          {asset.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+      {open && (
+        // Inline panel, not a floating modal: it renders inside the plugin's
+        // own area, so admin layouts and stacking contexts cannot hide it.
+        <div
+          ref={panelRef}
+          role="region"
+          aria-label="Media library"
+          onKeyDown={(event) => event.key === "Escape" && setOpen(false)}
+          style={{
+            display: "grid",
+            gap: 10,
+            padding: 12,
+            border: "1px solid var(--border, #3f3f46)",
+            borderRadius: "var(--radius, 10px)",
+            background: "var(--bg-surface-2, #18181b)",
+          }}
+        >
+          <Stack direction="row" justify="between" align="center">
+            <Text variant="strong">Media library</Text>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Close
+            </Button>
+          </Stack>
+          <SearchBar value={query} onChange={setQuery} placeholder="Search images" />
+          <div style={{ maxHeight: 360, overflowY: "auto" }}>
+            {error ? (
+              <Alert tone="warning" title="Media library unavailable">
+                {error} Use “Upload from computer” instead.
+              </Alert>
+            ) : !assets ? (
+              <Text variant="muted">Loading images…</Text>
+            ) : !shown.length ? (
+              <Text variant="muted">No images found. Upload your logo in Media first, or upload it from your computer.</Text>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
+                {shown.map((asset) => (
+                  <button
+                    key={asset.id}
+                    type="button"
+                    disabled={working}
+                    onClick={() => void use(asset.url, asset.name)}
+                    title={asset.name}
+                    style={{
+                      display: "grid",
+                      gap: 6,
+                      padding: 6,
+                      border: "1px solid var(--border, #3f3f46)",
+                      borderRadius: "var(--radius-sm, 6px)",
+                      // Checkerboard shows transparency.
+                      background:
+                        "repeating-conic-gradient(var(--bg-surface-3, #27272a) 0 25%, var(--bg-surface, #1f1f23) 0 50%) 50% / 16px 16px",
+                      cursor: working ? "wait" : "pointer",
+                      color: "var(--text, #e4e4e7)",
+                    }}
+                  >
+                    <img src={asset.thumb} alt="" loading="lazy" style={{ width: "100%", height: 72, objectFit: "contain" }} />
+                    <span
+                      style={{
+                        fontSize: "var(--text-xs, 11px)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        background: "var(--bg-surface, #1f1f23)",
+                        borderRadius: 4,
+                        padding: "2px 4px",
+                      }}
+                    >
+                      {asset.name}
+                    </span>
+                  </button>
+                ))}
               </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+            )}
+          </div>
+          {working && <Text variant="muted">Preparing the logo…</Text>}
+        </div>
+      )}
     </Stack>
   );
 }
