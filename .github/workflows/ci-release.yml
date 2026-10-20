@@ -1,4 +1,4 @@
-name: Validate and release alpha
+name: Validate and release
 
 on:
   pull_request:
@@ -6,13 +6,20 @@ on:
     branches: [main]
     tags: ["v*"]
   workflow_dispatch:
+  # Called by release-on-version.yml to publish the package version as a release.
+  workflow_call:
+    inputs:
+      version-tag:
+        description: Tag to publish, exactly "v" + the package.json version.
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 # Superseded PR builds can stop; main commits and version tags keep their own runs.
 concurrency:
-  group: alpha-${{ github.event.pull_request.number || format('{0}-{1}', github.ref, github.sha) }}
+  group: release-${{ github.event.pull_request.number || format('{0}-{1}-{2}', github.ref, github.sha, inputs.version-tag) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -30,6 +37,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
+      channel: ${{ steps.version.outputs.channel }}
+      versioned: ${{ steps.version.outputs.versioned }}
     steps:
       - name: Check out plugin
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,7 +48,7 @@ jobs:
           persist-credentials: false
 
       - name: Verify version tag points to main history
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' || inputs.version-tag != ''
         run: |
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             printf 'Version tags must point to a commit already merged into main.\n' >&2
@@ -71,17 +80,23 @@ jobs:
       - name: Install plugin dependencies
         run: bun install --frozen-lockfile
 
-      - name: Prepare alpha version
+      - name: Prepare release version
         id: version
+        env:
+          INPUT_VERSION_TAG: ${{ inputs.version-tag }}
         run: |
-          version_tag=""
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+          version_tag="$INPUT_VERSION_TAG"
+          if [ -z "$version_tag" ] && [ "$GITHUB_REF_TYPE" = "tag" ]; then
             version_tag="$GITHUB_REF_NAME"
           fi
           release_version="$(bun run scripts/release-version.ts "$GITHUB_RUN_NUMBER" "$GITHUB_SHA" "$version_tag")"
+          channel="$(bun run scripts/release-version.ts channel)"
           printf 'version=%s\n' "$release_version" >> "$GITHUB_OUTPUT"
           printf 'tag=v%s\n' "$release_version" >> "$GITHUB_OUTPUT"
+          printf 'channel=%s\n' "$channel" >> "$GITHUB_OUTPUT"
+          printf 'versioned=%s\n' "$([ -n "$version_tag" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           printf 'INSTATIC_PLUGIN_VERSION=%s\n' "$release_version" >> "$GITHUB_ENV"
+          printf 'RELEASE_CHANNEL=%s\n' "$channel" >> "$GITHUB_ENV"
 
       - name: Lint plugin
         run: bun run lint
@@ -98,11 +113,13 @@ jobs:
       - name: Verify archive and record build inputs
         run: |
           unzip -t artifacts/seo-geo.plugin.zip
-          bun --eval 'await Bun.write("artifacts/build-info.json", JSON.stringify({ unofficial: true, channel: "alpha", version: process.env.INSTATIC_PLUGIN_VERSION, pluginCommit: process.env.GITHUB_SHA, instaticCommit: process.env.INSTATIC_REF, bunVersion: Bun.version }, null, 2) + "\n")'
+          bun --eval 'await Bun.write("artifacts/build-info.json", JSON.stringify({ unofficial: true, channel: process.env.RELEASE_CHANNEL, version: process.env.INSTATIC_PLUGIN_VERSION, pluginCommit: process.env.GITHUB_SHA, instaticCommit: process.env.INSTATIC_REF, bunVersion: Bun.version }, null, 2) + "\n")'
+          # The CHANGELOG section for this version becomes the top of the release notes.
+          awk -v heading="## [$INSTATIC_PLUGIN_VERSION]" 'index($0, heading) == 1 { found = 1; next } found && /^## \[/ { exit } found { print }' CHANGELOG.md > artifacts/changes.md || true
           cd artifacts
           sha256sum seo-geo.plugin.zip build-info.json > SHA256SUMS
 
-      - name: Upload alpha build artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: seo-geo-${{ steps.version.outputs.version }}
@@ -111,11 +128,12 @@ jobs:
           retention-days: 14
 
   release:
-    name: Publish unofficial alpha prerelease
+    name: Publish release
     needs: validate
     if: >-
-      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      inputs.version-tag != '' ||
+      ((github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -124,6 +142,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_VERSION: ${{ needs.validate.outputs.version }}
       RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+      RELEASE_CHANNEL: ${{ needs.validate.outputs.channel }}
+      RELEASE_VERSIONED: ${{ needs.validate.outputs.versioned }}
     steps:
       - name: Download validated package
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -135,13 +155,30 @@ jobs:
         working-directory: artifacts
         run: sha256sum --check SHA256SUMS
 
-      - name: Write alpha release notes
+      - name: Write release notes
         run: |
-          cat > release-notes.md <<EOF
-          ## Unofficial alpha-test build
+          case "$RELEASE_CHANNEL" in
+            stable) stage="a stable release" ;;
+            rc) stage="a release candidate" ;;
+            *) stage="in $RELEASE_CHANNEL testing" ;;
+          esac
+          if [ "$RELEASE_VERSIONED" = "true" ]; then
+            kind="Release $RELEASE_TAG"
+          else
+            kind="Snapshot build from main"
+          fi
+          {
+            if [ "$RELEASE_VERSIONED" = "true" ] && [ -s artifacts/changes.md ]; then
+              printf "## What's new in %s\n" "$RELEASE_TAG"
+              cat artifacts/changes.md
+              printf '\n'
+            fi
+          } > release-notes.md
+          cat >> release-notes.md <<EOF
+          ## $kind
 
-          **This plugin is NOT official and is still in alpha testing.**
-          Features may be incomplete; consult the README for current implementation status.
+          **This plugin is NOT official.** It is independently maintained and is $stage.
+          Consult the README for current implementation status and limits.
 
           - Plugin version: \`$RELEASE_VERSION\`
           - Source commit: \`$GITHUB_SHA\`
@@ -166,16 +203,30 @@ jobs:
           \`SHA256SUMS\` verifies the package and \`build-info.json\` records its build inputs.
           EOF
 
-      - name: Publish prerelease
+      - name: Publish release
         run: |
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            printf 'Prerelease %s is already published; preserving its assets.\n' "$RELEASE_TAG"
+            printf 'Release %s is already published; preserving its assets.\n' "$RELEASE_TAG"
             exit 0
+          fi
+          channel_label="$(printf '%s' "$RELEASE_CHANNEL" | sed 's/^rc$/release candidate/')"
+          if [ "$RELEASE_VERSIONED" != "true" ] && [ "$RELEASE_CHANNEL" = "stable" ]; then channel_label="build"; fi
+          if [ "$RELEASE_VERSIONED" = "true" ]; then
+            title="SEO, GEO & AIO $RELEASE_TAG"
+          else
+            title="Snapshot $RELEASE_VERSION"
+          fi
+          # Only versioned stable releases become "Latest"; everything else is a prerelease.
+          if [ "$RELEASE_VERSIONED" = "true" ] && [ "$RELEASE_CHANNEL" = "stable" ]; then
+            flags=(--latest)
+          else
+            flags=(--prerelease --latest=false)
+            title="$title (unofficial $channel_label)"
           fi
           gh release create "$RELEASE_TAG" \
             artifacts/seo-geo.plugin.zip artifacts/SHA256SUMS artifacts/build-info.json \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "Unofficial alpha $RELEASE_VERSION" \
-            --prerelease --latest=false \
+            --title "$title" \
+            "${flags[@]}" \
             --notes-file release-notes.md
