@@ -4,7 +4,11 @@ All notable changes to this plugin. Versions follow [Semantic Versioning](https:
 
 This plugin is **unofficial** and independently maintained.
 
-## [Unreleased]
+## [1.0.0-beta.1] - 2026-10-20
+
+### Fixed
+
+- Settings, analytics tags and the social image design can be saved before the public website address is set. **Save & generate** still needs the address, and a note under the buttons now explains why a button is disabled.
 
 ### Changed
 
@@ -38,5 +42,6 @@ First beta. The plugin is feature-complete for the compatible Instatic host buil
 - AIO publication checks for search and snippet access, readable answers, source links, visible authors and accurate dates.
 - Markdown publishing, XML sitemaps, `robots.txt`, optional `llms.txt`, Schema.org structured data, content ZIP export, IndexNow, and Search Console/Bing visibility reports.
 
+[1.0.0-beta.1]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.1
 [1.0.0-beta.0]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.0
 [0.3.0-alpha.0]: https://github.com/flyingwebie/instatic-seo-geo/releases

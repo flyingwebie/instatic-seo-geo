@@ -110,13 +110,32 @@ export default definePluginAdminApp(function SeoGeo() {
   } catch (error) {
     ogError = message(error);
   }
-  let validConfiguration = !pendingJson && !analyticsError && !ogError;
-  try {
-    parseOptions(options);
-    siteOrigin(siteUrl);
-  } catch {
-    validConfiguration = false;
-  }
+  // Saving only needs valid fields; a blank website address is allowed so
+  // designs, tags and options can be saved before the site is set up.
+  // Generating needs the address, because every output uses it.
+  let blocker = pendingJson
+    ? "Apply or discard the advanced JSON draft in Setup before saving."
+    : analyticsError || ogError;
+  if (!blocker)
+    try {
+      parseOptions(options);
+    } catch (error) {
+      blocker = `Check the Setup fields: ${message(error)}`;
+    }
+  const siteUrlValue = siteUrl.trim();
+  if (!blocker && siteUrlValue)
+    try {
+      siteOrigin(siteUrlValue);
+    } catch {
+      blocker = "Enter the public website address as https://www.example.com (Setup → Website), or leave it blank for now.";
+    }
+  const canSave = !blocker;
+  const canGenerate = canSave && !!siteUrlValue;
+  const saveHint = blocker
+    ? blocker
+    : !siteUrlValue
+      ? "Add your public website address in Setup → Website to generate. You can already save your changes."
+      : "";
 
   const errorToast = (error: unknown) =>
     pushToast({ kind: "error", title: "SEO & GEO operation failed", body: message(error) });
@@ -180,7 +199,7 @@ export default definePluginAdminApp(function SeoGeo() {
     }
   };
   const save = async () => {
-    siteOrigin(siteUrl);
+    if (siteUrlValue) siteOrigin(siteUrlValue);
     const normalized = JSON.stringify(parseOptions(options));
     if (pendingJson)
       throw new Error("Apply or discard the advanced JSON draft before saving.");
@@ -191,7 +210,7 @@ export default definePluginAdminApp(function SeoGeo() {
     await routes.json("/configure", Type.Object({ ok: Type.Boolean() }), {
       method: "POST",
       body: JSON.stringify({
-        siteUrl,
+        siteUrl: siteUrlValue,
         options: normalized,
         llmsEnabled: llms,
         analytics: analyticsJson,
@@ -259,12 +278,12 @@ export default definePluginAdminApp(function SeoGeo() {
   const actions = (
     <Stack gap={8}>
       <Stack direction="row" gap={8} wrap>
-        <Button variant="primary" disabled={busy || !validConfiguration} onClick={generate}>
+        <Button variant="primary" disabled={busy || !canGenerate} onClick={generate}>
           Save &amp; generate
         </Button>
         <Button
           variant="secondary"
-          disabled={busy || !validConfiguration}
+          disabled={busy || !canSave}
           onClick={() =>
             perform(async () => {
               await save();
@@ -292,6 +311,7 @@ export default definePluginAdminApp(function SeoGeo() {
           Download content ZIP
         </Button>
       </Stack>
+      {saveHint && !busy && <Text variant="muted">{saveHint}</Text>}
       <Text variant="muted">
         {progress ||
           `${status?.generated ?? 0} of ${status?.total ?? 0} published routes generated · ${status?.indexable ?? 0} indexable`}
@@ -327,7 +347,7 @@ export default definePluginAdminApp(function SeoGeo() {
             analyticsProviders={detectProviders(JSON.parse(savedAnalytics) as AnalyticsOptions)}
             analyticsActive={analyticsActive(JSON.parse(savedAnalytics) as AnalyticsOptions)}
             socialImagesOn={resolveTemplate(JSON.parse(savedOg) as OgTemplate).enabled}
-            busy={busy || !validConfiguration}
+            busy={busy || !canGenerate}
             progress={progress}
             onNavigate={setTab}
             onGenerate={generate}

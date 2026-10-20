@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Instatic-UNOFFICIAL-64748b" alt="Unofficial Instatic plugin" />
-  <img src="https://img.shields.io/badge/version-1.0.0--beta.0-0ea5e9" alt="Version 1.0.0-beta.0" />
+  <img src="https://img.shields.io/badge/version-1.0.0--beta.1-0ea5e9" alt="Version 1.0.0-beta.1" />
   <img src="https://img.shields.io/badge/status-BETA-8b5cf6" alt="Status: beta" />
   <img src="https://img.shields.io/badge/Bun-1.4.x-14151a" alt="Bun 1.4.x" />
   <img src="https://img.shields.io/badge/TypeScript-strict-3178c6" alt="Strict TypeScript" />
