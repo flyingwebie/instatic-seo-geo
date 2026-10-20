@@ -13,6 +13,13 @@ export const ReportRequestSchema = Type.Object(
   { additionalProperties: false },
 );
 export type ReportRequest = Static<typeof ReportRequestSchema>;
+const MetricsSchema = Type.Object({
+  clicks: Type.Number(),
+  impressions: Type.Number(),
+  ctr: Type.Number(),
+  position: Type.Number(),
+});
+export type Metrics = Static<typeof MetricsSchema>;
 export const VisibilityReportSchema = Type.Object({
   provider: Type.String(),
   fetchedAt: Type.String(),
@@ -27,9 +34,51 @@ export const VisibilityReportSchema = Type.Object({
       ctr: Type.Number(),
       position: Type.Number(),
       date: Type.Optional(Type.String()),
+      page: Type.Optional(Type.String()),
+      query: Type.Optional(Type.String()),
     }),
   ),
+  /** One entry per day in the requested range that has data. */
+  daily: Type.Optional(
+    Type.Array(Type.Composite([Type.Object({ date: Type.String() }), MetricsSchema])),
+  ),
+  /** Totals for the same number of days immediately before the range. */
+  previous: Type.Optional(MetricsSchema),
 });
+export type VisibilityReport = Static<typeof VisibilityReportSchema>;
+
+type DatedMetrics = Metrics & { date: string };
+/** Sum clicks/impressions; CTR and position are impression-weighted. */
+export function totals(rows: readonly Metrics[]): Metrics {
+  const clicks = rows.reduce((sum, row) => sum + row.clicks, 0);
+  const impressions = rows.reduce((sum, row) => sum + row.impressions, 0);
+  const weighted = rows.reduce(
+    (sum, row) => sum + row.position * row.impressions,
+    0,
+  );
+  return {
+    clicks,
+    impressions,
+    ctr: impressions ? clicks / impressions : 0,
+    position: impressions ? weighted / impressions : 0,
+  };
+}
+function byDate(rows: readonly DatedMetrics[]): DatedMetrics[] {
+  const groups = new Map<string, DatedMetrics[]>();
+  for (const row of rows)
+    groups.set(row.date, [...(groups.get(row.date) ?? []), row]);
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([date, group]) => ({ date, ...totals(group) }));
+}
+const day = 86400000;
+/** First day of the equally long period that ends the day before `startDate`. */
+function previousStart(startDate: string, endDate: string): string {
+  const span = (Date.parse(endDate) - Date.parse(startDate)) / day + 1;
+  return new Date(Date.parse(startDate) - span * day)
+    .toISOString()
+    .slice(0, 10);
+}
 
 async function providerFetch(
   url: string,
@@ -163,6 +212,7 @@ export async function visibilityReport(
     throw new Error("Use a valid start date on or before the end date.");
   const origin = siteOrigin(api.cms.settings.get("siteUrl") ?? "");
   let rows: Static<typeof VisibilityReportSchema>["rows"];
+  let dated: DatedMetrics[];
   if (provider === "google") {
     let token = api.cms.settings.get("googleAccessToken") ?? "";
     const refreshToken = api.cms.settings.get("googleRefreshToken") ?? "";
@@ -240,11 +290,61 @@ export async function visibilityReport(
     );
     rows = (result.rows ?? []).map((row) => ({
       label: row.keys.join(" · "),
+      page: row.keys[0],
+      query: row.keys[1],
       clicks: row.clicks,
       impressions: row.impressions,
       ctr: row.ctr,
       position: row.position,
     }));
+    // One date-only query covers the range and the period before it, so
+    // the dashboard can chart the trend and compare with no extra quota.
+    const series = validate(
+      Type.Object({
+        rows: Type.Optional(
+          Type.Array(
+            Type.Object({
+              keys: Type.Array(Type.String()),
+              clicks: Type.Number(),
+              impressions: Type.Number(),
+              ctr: Type.Number(),
+              position: Type.Number(),
+            }),
+          ),
+        ),
+      }),
+      await checked(
+        await providerFetch(
+          "https://www.googleapis.com/webmasters/v3/sites/" +
+            encodeURIComponent(property) +
+            "/searchAnalytics/query",
+          {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + token,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              startDate: previousStart(startDate, endDate),
+              endDate,
+              dimensions: ["date"],
+              rowLimit: 1000,
+              type: "web",
+            }),
+          },
+        ),
+        "Search Console",
+      ),
+    );
+    dated = (series.rows ?? [])
+      .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.keys[0] ?? ""))
+      .map((row) => ({
+        date: row.keys[0]!,
+        clicks: row.clicks,
+        impressions: row.impressions,
+        ctr: row.ctr,
+        position: row.position,
+      }));
   } else {
     const key = api.cms.settings.get("bingApiKey") ?? "";
     if (!key)
@@ -270,30 +370,36 @@ export async function visibilityReport(
       }),
       await checked(await providerFetch(url.href), "Bing Webmaster"),
     );
-    rows = result.d
-      .map((row) => {
-        const ms = /^\/Date\((\d+)(?:[+-]\d+)?\)\/$/.exec(row.Date)?.[1];
-        const date = new Date(ms ? Number(ms) : row.Date)
-          .toISOString()
-          .slice(0, 10);
-        return {
-          label: row.Query,
-          clicks: row.Clicks,
-          impressions: row.Impressions,
-          ctr: row.Impressions ? row.Clicks / row.Impressions : 0,
-          position: row.AvgImpressionPosition,
-          date,
-        };
-      })
-      .filter((row) => row.date! >= startDate && row.date! <= endDate)
+    const parsed = result.d.map((row) => {
+      const ms = /^\/Date\((\d+)(?:[+-]\d+)?\)\/$/.exec(row.Date)?.[1];
+      const date = new Date(ms ? Number(ms) : row.Date)
+        .toISOString()
+        .slice(0, 10);
+      return {
+        label: row.Query,
+        query: row.Query,
+        clicks: row.Clicks,
+        impressions: row.Impressions,
+        ctr: row.Impressions ? row.Clicks / row.Impressions : 0,
+        position: row.AvgImpressionPosition,
+        date,
+      };
+    });
+    const from = previousStart(startDate, endDate);
+    dated = parsed.filter((row) => row.date >= from && row.date <= endDate);
+    rows = parsed
+      .filter((row) => row.date >= startDate && row.date <= endDate)
       .slice(0, 1000);
   }
+  const previous = dated.filter((row) => row.date < startDate);
   return {
     provider,
     fetchedAt: new Date().toISOString(),
     startDate,
     endDate,
     rows,
+    daily: byDate(dated.filter((row) => row.date >= startDate)),
+    ...(previous.length ? { previous: totals(previous) } : {}),
     limitation:
       provider === "google"
         ? "Up to 1,000 top page/query rows. Search Console does not return every query. These are web-search metrics, not AI citation counts."

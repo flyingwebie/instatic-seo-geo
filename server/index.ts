@@ -10,6 +10,9 @@ import {
   submitIndexNow,
   visibilityReport,
 } from "../src/integrations";
+import { injectAnalytics, validateAnalytics } from "../src/analytics";
+import { parseOgTemplate } from "../src/og/template";
+import { LogoUploadSchema } from "../src/og/logo";
 
 const plugin: ServerPluginModule = {
   activate(api) {
@@ -85,6 +88,8 @@ const plugin: ServerPluginModule = {
               siteUrl: Type.String(),
               options: Type.String(),
               llmsEnabled: Type.Boolean(),
+              analytics: Type.Optional(Type.String()),
+              ogTemplate: Type.Optional(Type.String()),
             },
             { additionalProperties: false },
           ),
@@ -92,6 +97,10 @@ const plugin: ServerPluginModule = {
         );
         siteOrigin(input.siteUrl);
         parseOptions(input.options);
+        if (input.analytics !== undefined)
+          input.analytics = JSON.stringify(validateAnalytics(input.analytics));
+        if (input.ogTemplate !== undefined)
+          input.ogTemplate = JSON.stringify(parseOgTemplate(input.ogTemplate));
         await api.cms.settings.replace({
           ...api.cms.settings.getAll(),
           ...input,
@@ -110,8 +119,29 @@ const plugin: ServerPluginModule = {
           ),
           await req.json(),
         );
-        return await service.rebuild(input.force);
+        const result = await service.rebuild(input.force);
+        if (result.done) await service.recordSnapshot(true);
+        return result;
       }),
+    );
+    api.cms.routes.post(
+      "/og-logo",
+      "plugins.configure",
+      guarded(async ({ req }) =>
+        service.saveLogo(validate(LogoUploadSchema, await req.json())),
+      ),
+    );
+    api.cms.routes.get(
+      "/og-logo",
+      "plugins.read",
+      guarded(async ({ req }) => ({
+        logo: await service.logo(new URL(req.url).searchParams.get("hash") ?? ""),
+      })),
+    );
+    api.cms.routes.get(
+      "/history",
+      "plugins.read",
+      guarded(() => service.history()),
     );
     api.cms.routes.get(
       "/download",
@@ -126,9 +156,24 @@ const plugin: ServerPluginModule = {
     api.cms.routes.post(
       "/report",
       "plugins.read",
-      guarded(async ({ req }) =>
-        visibilityReport(api, validate(ReportRequestSchema, await req.json())),
-      ),
+      guarded(async ({ req }) => {
+        const report = await visibilityReport(
+          api,
+          validate(ReportRequestSchema, await req.json()),
+        );
+        await service.saveReport(report);
+        return report;
+      }),
+    );
+    api.cms.routes.get(
+      "/report",
+      "plugins.read",
+      guarded(async ({ req }) => {
+        const provider = new URL(req.url).searchParams.get("provider");
+        if (provider !== "google" && provider !== "bing")
+          throw new Error("Choose Google Search Console or Bing Webmaster.");
+        return { report: await service.lastReport(provider) };
+      }),
     );
     api.cms.routes.site.get(
       "/*",
@@ -136,9 +181,18 @@ const plugin: ServerPluginModule = {
     );
     api.cms.hooks.on("publication.changed", () => service.invalidate());
     api.cms.hooks.on("settings.changed", () => service.invalidate());
-    api.cms.hooks.filter("publish.html", (html, context) =>
-      service.enrich(html, context),
-    );
+    api.cms.hooks.filter("publish.html", async (html, context) => {
+      const enriched = await service.enrich(html, context);
+      let analytics;
+      try {
+        analytics = validateAnalytics(api.cms.settings.get("analytics"));
+      } catch (error) {
+        // A broken tag must never break publishing; the admin shows the error.
+        console.error("[plugin:instatic.seo-geo] Analytics tags:", error);
+        return enriched;
+      }
+      return injectAnalytics(enriched, analytics);
+    });
     api.cms.schedule.register({
       id: "publication-sync",
       cadence: { interval: "every", minutes: 1 },
@@ -152,6 +206,7 @@ const plugin: ServerPluginModule = {
           while (!result.done && Date.now() < deadline)
             result = await service.rebuild();
           if (result.done) {
+            await service.recordSnapshot();
             await submitIndexNow(api, service);
             await service.cleanup();
           }

@@ -42,6 +42,15 @@ export const GeneratedPageSchema = Type.Object({
   dateModified: Type.String(),
   links: Type.Array(Type.String()),
   images: Type.Array(Type.Object({ src: Type.String(), alt: Type.String() })),
+  /** Where the page's own social image came from, before generated images. */
+  socialImage: Type.Optional(
+    Type.Union([
+      Type.Literal("authored"),
+      Type.Literal("meta"),
+      Type.Literal("content"),
+      Type.Literal("none"),
+    ]),
+  ),
   schemas: Type.Array(JsonObjectSchema),
   findings: Type.Array(FindingSchema),
   aio: Type.Optional(AioReportSchema),
@@ -179,8 +188,18 @@ export function enrichPage(
       alt: attribute(node, "alt") ?? "",
     }))
     .filter((image) => image.src);
-  const image =
-    authored.image ?? meta(parsed.head, "og:image") ?? images[0]?.src;
+  // A social image this plugin generated earlier is not the page's own image.
+  const metaImage = meta(parsed.head, "og:image");
+  const ownMeta =
+    metaImage && !isGeneratedImage(metaImage, origin) ? metaImage : undefined;
+  const image = authored.image ?? ownMeta ?? images[0]?.src;
+  const socialImage = authored.image
+    ? "authored"
+    : ownMeta
+      ? "meta"
+      : images[0]?.src
+        ? "content"
+        : "none";
   const datePublished =
     safeDate(
       authored.datePublished ??
@@ -724,6 +743,7 @@ export function enrichPage(
       dateModified,
       links,
       images,
+      socialImage,
       schemas: graph,
       findings,
       ...(options.aioEnabled === false
@@ -744,6 +764,16 @@ export function enrichPage(
           }),
     },
   };
+}
+
+/** True for social images this plugin serves at /og/<key>.png on the site. */
+export function isGeneratedImage(url: string, origin: string): boolean {
+  try {
+    const parsed = new URL(url, origin);
+    return parsed.origin === origin && /^\/og\/[a-f0-9]{24}\.png$/.test(parsed.pathname);
+  } catch {
+    return false;
+  }
 }
 
 export async function fingerprint(value: unknown): Promise<string> {
