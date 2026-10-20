@@ -32,6 +32,27 @@ import {
   serializePage,
 } from "./html";
 import { auditSite } from "./audit";
+import { HistorySchema, type HistoryPoint } from "./adminSchemas";
+import {
+  OG_PATH,
+  fromBase64,
+  ogJobs,
+  ogKey,
+  renderOgPng,
+  toBase64,
+  usesGenerated,
+} from "./og/images";
+import { decodeLogo, logoHash, type LogoUpload } from "./og/logo";
+import type { Bitmap } from "./og/raster";
+import {
+  OG_HEIGHT,
+  OG_WIDTH,
+  ogData,
+  parseOgTemplate,
+  resolveTemplate,
+  type OgTemplate,
+} from "./og/template";
+import { VisibilityReportSchema, type VisibilityReport } from "./integrations";
 
 const RedirectSchema = Type.Object({
   from: Type.String(),
@@ -58,6 +79,17 @@ const PendingSchema = Type.Object({
   siteName: Type.String(),
   htmlOffset: Type.Integer(),
   bytes: Type.Integer(),
+  imageOffset: Type.Optional(Type.Integer()),
+});
+/** Stored social images: content key -> storage record id. */
+const OgIndexSchema = Type.Record(Type.String(), Type.String());
+/** Uploaded logos: hash -> upload time (ms). */
+const LogoIndexSchema = Type.Record(Type.String(), Type.Number());
+const StoredLogoSchema = Type.Object({
+  name: Type.String(),
+  width: Type.Integer(),
+  height: Type.Integer(),
+  data: Type.String(),
 });
 
 export class PublicationService {
@@ -67,6 +99,7 @@ export class PublicationService {
   private running = false;
   private indexNowTail: Promise<void> = Promise.resolve();
   private cachedInventory?: { revision: string; routes: PublishedRoute[] };
+  private logoCache = new Map<string, Bitmap | null>();
   constructor(api: {
     cms: Pick<ServerPluginApi["cms"], "settings" | "storage" | "publication">;
   }) {
@@ -76,13 +109,85 @@ export class PublicationService {
   invalidate(): void {
     this.cachedInventory = undefined;
   }
+  /** The saved social-image design; an unreadable one counts as switched off. */
+  ogTemplate(): OgTemplate {
+    try {
+      return parseOgTemplate(this.api.cms.settings.get("ogTemplate"));
+    } catch (error) {
+      console.error("[plugin:instatic.seo-geo] Social image template:", error);
+      return {};
+    }
+  }
+  /** Store a logo prepared in the admin; returns its content hash. */
+  async saveLogo(upload: LogoUpload) {
+    decodeLogo(upload); // Validates the pixels before anything is stored.
+    const hash = await logoHash(upload);
+    await this.save("og-logo:" + hash, upload);
+    const index = (await this.state("og-logos", LogoIndexSchema)) ?? {};
+    index[hash] = Date.now();
+    await this.save("og-logos", index);
+    return { hash, width: upload.width, height: upload.height };
+  }
+  async logo(hash: string) {
+    if (!/^[a-f0-9]{64}$/.test(hash)) return null;
+    return (await this.state("og-logo:" + hash, StoredLogoSchema)) ?? null;
+  }
+  /** Decoded logo pixels, cached for the life of the worker. */
+  private async logoBitmap(template: OgTemplate): Promise<Bitmap | undefined> {
+    const hash = template.logo?.hash;
+    if (!hash) return undefined;
+    if (!this.logoCache.has(hash)) {
+      const stored = await this.logo(hash);
+      this.logoCache.set(hash, stored ? decodeLogo(stored) : null);
+    }
+    return this.logoCache.get(hash) ?? undefined;
+  }
+  async ogIndex(): Promise<Record<string, string>> {
+    return (await this.state("og-index", OgIndexSchema)) ?? {};
+  }
+  /** Section (collection) per route id, used for the badge on each image. */
+  private sections(routes: readonly PublishedRoute[]) {
+    return new Map(routes.map((route) => [route.id, route.tableSlug ?? ""]));
+  }
+  /** Serve a stored social image. Names are content hashes, so they cache forever. */
+  async ogFile(key: string) {
+    const id = (await this.ogIndex())[key];
+    const record = id
+      ? (await this.records("images", { key }))[0]
+      : undefined;
+    if (!record || typeof record.data.content !== "string")
+      return {
+        __response: true,
+        status: 404,
+        headers: { "Cache-Control": "no-store" },
+        body: "Not found",
+      };
+    return {
+      __response: true,
+      status: 200,
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+      },
+      body: fromBase64(record.data.content),
+    };
+  }
   configuration(): {
     origin: string;
     options: SiteOptions;
     llms: boolean;
     format: number;
+    analytics?: string;
+    ogTemplate?: string;
   } {
+    const analytics = (this.api.cms.settings.get("analytics") ?? "").trim();
+    const ogTemplate = (this.api.cms.settings.get("ogTemplate") ?? "").trim();
     return {
+      ...(ogTemplate && ogTemplate !== "{}" ? { ogTemplate } : {}),
+      // Tags change published HTML, so they take part in the fingerprint.
+      // Blank keeps existing fingerprints stable for sites without tags.
+      ...(analytics && analytics !== "{}" ? { analytics } : {}),
       // Changing generation semantics invalidates exports, including after a plugin upgrade.
       format: 2,
       origin: siteOrigin(this.api.cms.settings.get("siteUrl") ?? ""),
@@ -196,11 +301,21 @@ export class PublicationService {
         completedAt: "",
         findings: [],
         suggestions: [],
+        siteName: "",
         pages: [],
       };
     const state = await this.current();
     const pending = await this.state("pending", PendingSchema);
     const audit = auditSite(state.pages, state.origin, state.options);
+    const sections = this.sections(state.inventory.routes);
+    // Generated card URL per page, only for images that exist.
+    const ogImages = new Map<string, string>();
+    const template = this.ogTemplate();
+    if (resolveTemplate(template).enabled && state.generation) {
+      const stored = await this.ogIndex();
+      for (const job of await ogJobs(template, state.pages, state.generation.siteName, sections))
+        if (stored[job.key]) ogImages.set(job.path, `${state.origin}/og/${job.key}.png`);
+    }
     return {
       configured: true,
       stage: pending
@@ -214,12 +329,18 @@ export class PublicationService {
       pending: !!pending,
       completedAt: state.generation?.completedAt ?? "",
       ...audit,
+      siteName: state.generation?.siteName ?? "",
       pages: state.pages.map((page) => ({
         path: page.path,
         title: page.title,
         canonical: page.canonical,
         indexable: page.indexable,
         lastModified: page.dateModified,
+        description: page.description,
+        datePublished: page.datePublished,
+        section: sections.get(page.id) ?? "",
+        socialImage: page.socialImage ?? "none",
+        ...(ogImages.has(page.path) ? { ogImage: ogImages.get(page.path) } : {}),
         ...(page.aio ? { aio: page.aio } : {}),
       })),
     };
@@ -234,6 +355,8 @@ export class PublicationService {
     total: number;
     phase?: string;
     refreshed?: number;
+    images?: number;
+    imageTotal?: number;
   }> {
     if (this.running)
       throw new Error("A generation batch is already running; retry shortly.");
@@ -277,6 +400,7 @@ export class PublicationService {
           siteName: "",
           htmlOffset: 0,
           bytes: 0,
+          imageOffset: 0,
         };
         await this.save("pending", pending);
       }
@@ -355,6 +479,58 @@ export class PublicationService {
           phase: "documents",
           refreshed: pending.htmlOffset,
         };
+      // Social images render between documents and the HTML refresh, so
+      // refreshed pages can point at images that already exist.
+      const template = this.ogTemplate();
+      if (resolveTemplate(template).enabled) {
+        const jobs = await ogJobs(
+          template,
+          await this.pages(pending.id),
+          pending.siteName,
+          this.sections(inventory.routes),
+        );
+        const first = pending.imageOffset ?? 0;
+        // Rendering takes about a second in the sandbox; start a fresh
+        // request after the documents batch and stop well inside the budget.
+        const started = Date.now();
+        let index = first;
+        if (!routes.length) {
+          const stored = await this.ogIndex();
+          const logo = await this.logoBitmap(template);
+          let last = 0;
+          while (index < jobs.length) {
+            // Predict the next render from the last one so a request never
+            // runs past the sandbox's per-call budget.
+            if (index > first && Date.now() - started + last > 2800) break;
+            const job = jobs[index]!;
+            if (!stored[job.key]) {
+              const renderStart = Date.now();
+              const png = renderOgPng(template, job.data, logo);
+              last = Date.now() - renderStart;
+              const record = await this.api.cms.storage
+                .collection("images")
+                .create({ key: job.key, content: toBase64(png) });
+              stored[job.key] = record.id;
+              await this.save("og-index", stored);
+            }
+            index++;
+          }
+          if (index !== first) {
+            pending.imageOffset = index;
+            await this.save("pending", pending);
+          }
+        }
+        if (index < jobs.length)
+          return {
+            done: false,
+            offset: pending.offset,
+            total: pending.total,
+            phase: "images",
+            refreshed: pending.htmlOffset,
+            images: index,
+            imageTotal: jobs.length,
+          };
+      }
       // Re-render only existing published versions, in small batches, before
       // exposing the new export pointer. Drafts never enter this pipeline.
       const refresh = allowedRoutes
@@ -471,6 +647,90 @@ export class PublicationService {
         record.data.generation !== pending?.id
       )
         await this.api.cms.storage.collection("documents").delete(record.id);
+    await this.cleanupImages(current, pending);
+    await this.cleanupLogos(this.ogTemplate());
+  }
+  /** Remove social images no page uses any more (after a design or text change). */
+  private async cleanupImages(
+    current: { id: string; siteName: string } | undefined,
+    pending: { id: string } | undefined,
+  ) {
+    const index = await this.ogIndex();
+    if (!Object.keys(index).length || pending) return;
+    const template = this.ogTemplate();
+    const keep = new Set<string>();
+    if (current && resolveTemplate(template).enabled) {
+      const inventory = await this.inventory();
+      for (const job of await ogJobs(
+        template,
+        await this.pages(current.id),
+        current.siteName,
+        this.sections(inventory.routes),
+      ))
+        keep.add(job.key);
+    }
+    let changed = false;
+    for (const [key, id] of Object.entries(index)) {
+      if (keep.has(key)) continue;
+      await this.api.cms.storage.collection("images").delete(id);
+      delete index[key];
+      changed = true;
+    }
+    if (changed) await this.save("og-index", index);
+  }
+  /** Drop logos the saved design no longer uses, after a day's grace for unsaved picks. */
+  private async cleanupLogos(template: OgTemplate) {
+    const index = (await this.state("og-logos", LogoIndexSchema)) ?? {};
+    let changed = false;
+    for (const [hash, uploaded] of Object.entries(index)) {
+      if (hash === template.logo?.hash || Date.now() - uploaded < 86400000) continue;
+      await this.clear("og-logo:" + hash);
+      delete index[hash];
+      this.logoCache.delete(hash);
+      changed = true;
+    }
+    if (changed) await this.save("og-logos", index);
+  }
+  /** Daily site-health snapshots, oldest first, for trend charts. */
+  async history(): Promise<HistoryPoint[]> {
+    return (await this.state("history", HistorySchema)) ?? [];
+  }
+  /**
+   * Record today's health once a day, or refresh it after a manual
+   * generation. Keeps a rolling year so the chart shows long-term progress.
+   */
+  async recordSnapshot(force = false): Promise<void> {
+    const status = await this.status();
+    if (!status.configured || !status.generated) return;
+    const date = new Date().toISOString().slice(0, 10);
+    const history = await this.history();
+    if (!force && history.at(-1)?.date === date) return;
+    const aio = status.pages.filter((page) => page.aio);
+    const point: HistoryPoint = {
+      date,
+      total: status.total,
+      generated: status.generated,
+      indexable: status.indexable,
+      errors: status.findings.filter((f) => f.severity === "error").length,
+      warnings: status.findings.filter((f) => f.severity === "warning").length,
+      notices: status.findings.filter((f) => f.severity === "info").length,
+      aioReviewed: aio.length,
+      aioReady: aio.filter((page) =>
+        page.aio!.checks.every((check) => check.status === "pass"),
+      ).length,
+    };
+    await this.save(
+      "history",
+      [...history.filter((entry) => entry.date !== date), point].slice(-366),
+    );
+  }
+  async lastReport(provider: string): Promise<VisibilityReport | null> {
+    return (
+      (await this.state("report:" + provider, VisibilityReportSchema)) ?? null
+    );
+  }
+  async saveReport(report: VisibilityReport): Promise<void> {
+    await this.save("report:" + report.provider, report);
   }
   async enrich(
     html: string,
@@ -557,6 +817,10 @@ export class PublicationService {
           '">',
       );
     }
+    await this.applySocialImage(parsed.head, previous, context.tableSlug, {
+      origin: config.origin,
+      siteName: pending?.siteName || generation?.siteName || "",
+    });
     const group =
       eligibleTranslations(generated, config.options).find((group) =>
         group.some((entry) => entry.path === context.urlPath),
@@ -572,7 +836,37 @@ export class PublicationService {
       );
     return serializePage(parsed.document);
   }
+  /**
+   * Point og:image / twitter:image at the generated card when the design is on
+   * and this page should use it. Pages keep their own image otherwise.
+   */
+  private async applySocialImage(
+    head: ReturnType<typeof parsePage>["head"],
+    page: GeneratedPage | undefined,
+    tableSlug: string | undefined,
+    site: { origin: string; siteName: string },
+  ) {
+    const raw = this.ogTemplate();
+    const template = resolveTemplate(raw);
+    if (!page || !usesGenerated(template, page)) return;
+    const data = ogData(template, { ...page, tableSlug }, site.siteName);
+    const key = await ogKey(template, data);
+    if (!(await this.ogIndex())[key]) return; // Not rendered yet; keep the page's tags.
+    for (const node of elements(head, "meta")) {
+      const name = attribute(node, "property") ?? attribute(node, "name") ?? "";
+      if (/^og:image(:|$)/.test(name) || name === "twitter:image" || name === "twitter:card" || name === "twitter:image:alt")
+        remove(node);
+    }
+    const url = escapeHtml(`${site.origin}/og/${key}.png`);
+    const alt = escapeHtml(data.title);
+    append(
+      head,
+      `<meta property="og:image" content="${url}"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="${OG_WIDTH}"><meta property="og:image:height" content="${OG_HEIGHT}"><meta property="og:image:alt" content="${alt}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${url}"><meta name="twitter:image:alt" content="${alt}">`,
+    );
+  }
   async publicFile(path: string) {
+    const og = OG_PATH.exec(path);
+    if (og) return this.ogFile(og[1]!);
     const notFound = {
       __response: true,
       status: 404,

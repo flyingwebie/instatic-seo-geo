@@ -5,6 +5,10 @@
 </p>
 
 <p align="center">
+  <img src="docs/images/hero.png" alt="The SEO, GEO &amp; AIO dashboard in the Instatic admin, with three automatically generated social sharing images" width="100%" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Instatic-UNOFFICIAL-64748b" alt="Unofficial Instatic plugin" />
   <img src="https://img.shields.io/badge/status-ALPHA_TEST-f59e0b" alt="Status: alpha testing" />
   <img src="https://img.shields.io/badge/Bun-1.4.x-14151a" alt="Bun 1.4.x" />
@@ -14,6 +18,7 @@
 
 <p align="center">
   <a href="#quick-start">Install</a> ·
+  <a href="#a-tour-of-the-admin-page">Tour</a> ·
   <a href="#features-and-status">Features</a> ·
   <a href="docs/roadmap.md">Roadmap</a> ·
   <a href="docs/research.md">Research</a> ·
@@ -46,6 +51,42 @@ This plugin is designed around one rule: **every generated representation should
 
 These are product goals. A plugin can improve technical readiness; it cannot guarantee rankings, indexing, or citations across search providers. The [research notes](docs/research.md) explain the evidence and limitations.
 
+## A tour of the admin page
+
+Everything lives on one **SEO, GEO & AIO** page in the Instatic admin, organised in six tabs. The screenshots use a fictional demo site.
+
+### Overview: see how your site is doing
+
+Headline numbers with the change since last month, a step-by-step setup checklist, the most important things to fix, and trend charts that are recorded daily so you can watch the site improve over time.
+
+<p align="center"><img src="docs/images/dashboard-overview.png" alt="Overview tab with headline numbers, a setup checklist, prioritised fixes and trend charts" width="100%" /></p>
+
+### Performance: understand your search traffic
+
+Connect your own Google Search Console or Bing Webmaster property and compare clicks, impressions, click-through rate and average position with the previous period. Daily charts, top queries and pages, and a **Quick wins** list of queries you already rank for but rarely get clicked on.
+
+<p align="center"><img src="docs/images/search-performance.png" alt="Performance tab with search metrics, a daily clicks chart, top queries, top pages and quick wins" width="100%" /></p>
+
+### Analytics & tags: paste any tracking code
+
+Add Google Analytics 4 or Google Tag Manager with just their ID, or paste a snippet from Plausible, Fathom, Umami, Microsoft Clarity or any other tool. Tags are added to every published page and allowed through the site's Content Security Policy automatically, using exact script hashes and the domains the snippet uses, so nothing else is loosened. Google Consent Mode v2 is one switch away.
+
+<p align="center"><img src="docs/images/analytics-tags.png" alt="Analytics and tags tab with Google quick setup, a custom snippet box and allowed domains" width="100%" /></p>
+
+### Social images: on-brand sharing cards for every page
+
+Choose one of 20 templates, add your logo from the media library and fine-tune colours and layout. Every page then gets its own 1200×630 PNG with its title, shown when someone shares the link on LinkedIn, Facebook, X, Slack or WhatsApp. [More below](#social-images).
+
+<p align="center"><img src="docs/images/social-templates-gallery.png" alt="Template gallery showing 20 social image designs previewed with the demo site's logo" width="100%" /></p>
+
+### Checks: fix what matters
+
+Publication checks with plain-language fixes, the AI Overview publication review, internal link suggestions and a searchable inventory of every generated page.
+
+<p align="center"><img src="docs/images/publication-checks.png" alt="Checks tab with filtered findings and the AI Overview publication review" width="100%" /></p>
+
+The **Setup** tab holds the guided configuration: website address, per-page metadata, business and author profiles, redirects, languages, crawler preferences and AIO options.
+
 ## Features and status
 
 | Capability             | Scope                                                                                         | Status                 |
@@ -65,6 +106,9 @@ These are product goals. A plugin can improve technical readiness; it cannot gua
 | Guided configuration   | Toggles, page selection, profiles, FAQs, schemas, redirects, languages and crawler forms      | ✅ Implemented · alpha |
 | AIO publication review | Local search/snippet checks, visible answer passages, topic headings, sources and attribution | ✅ Implemented · alpha |
 | Extended support       | IndexNow, multilingual validation, specialized schema, visibility reports                     | ✅ Implemented · alpha |
+| Dashboard and charts   | Overview, health trends, Search Console/Bing performance charts and quick wins                | ✅ Implemented · alpha |
+| Analytics tags         | GA4, Tag Manager or any pasted snippet, allowed through the page CSP by hash and host         | ✅ Implemented · alpha |
+| Social images          | Designed template rendered to a static 1200×630 PNG per page at `/og/<hash>.png`              | ✅ Implemented · alpha |
 
 See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependencies, and acceptance criteria.
 
@@ -127,6 +171,24 @@ If the server has already been updated, reload the admin page to load its rebuil
 [Google's AI search guidance](https://developers.google.com/search/docs/appearance/ai-features) says AI Overviews and AI Mode use the same SEO foundations, with no extra technical requirements, special AI schema or required AI text file. Supporting links need to be indexed and eligible to display a snippet. Local checks cannot establish actual search indexing or guarantee selection.
 
 The plugin preserves authored snippet and preview directives. Guided page controls can override generic snippet preferences, while crawler-specific metadata and `data-nosnippet` remain in place. Optional question/answer fields compare your editorial brief against published headings and paragraphs; they never insert hidden answers. Source counts and answer-length checks are clearly labelled heuristics, rather than a ranking score. Search Console's Web reports include AI feature traffic without isolating every AI citation.
+
+## Social images
+
+<p align="center"><img src="docs/images/social-templates.jpg" alt="All 20 social image templates rendered with the same page title and logo" width="100%" /></p>
+
+Every template above was drawn by the plugin's own renderer, exactly as it would be published. They combine ten layouts (Classic, Centered, Split panel, Magazine, Floating card, Frame, Spotlight, Sidebar, Highlighter and Quote) with patterns such as mesh glows, waves, rings, grids and stripes.
+
+<p align="center"><img src="docs/images/social-image-designer.png" alt="Social image designer with logo, layout and colour controls next to a live preview and a shared-link mock-up" width="100%" /></p>
+
+**Social images** in the admin page offers a gallery of 20 ready-made templates (ten layouts such as card, split panel, sidebar, highlighter and quote, combined with patterns like mesh glows, waves, rings and stripes), previewed live with your own page and logo. Pick one, then fine-tune layout, colours, title size, weight and case, and which details to show. A logo can be chosen from the media library (read through the admin's own media endpoint with the signed-in session) or uploaded from the computer; the browser converts any format, including SVG and WebP, into a trimmed bitmap that the sandbox stores by content hash. The live preview uses the same renderer as the server, so it matches the published image exactly.
+
+During **Save & generate** the plugin renders one PNG per page between the document and HTML refresh phases. Rendering takes about a second per image inside the QuickJS sandbox, so manual generation works in short time-boxed batches; scheduled generation does the rest. File names are content hashes of the design and the page's text, so unchanged pages are never re-rendered, social networks see a new URL when a title changes, and files are served with long-lived caching. Images no page uses any more are removed after the next completed generation.
+
+A per-page image set under **Setup → Pages** always wins. In the default mode, pages that already declare their own `og:image` keep it; **Every page** mode replaces those too. Text uses Inter 4.1 (SIL Open Font License, `src/og/FONT-LICENSE.txt`), baked by `scripts/og-font.py` for Western and Central European Latin characters.
+
+### Repository social preview
+
+[`docs/images/social-preview.png`](docs/images/social-preview.png) is this repository's own sharing card, generated with the Aurora template. Maintainers can upload it under **Settings → General → Social preview** on GitHub.
 
 ## Development
 
@@ -282,16 +344,22 @@ seo-geo/
 │   └── ci-release.yml        # Validation, packaging, and alpha prereleases
 ├── instatic-plugin.config.ts  # Plugin identity and permission declarations
 ├── admin/
-│   └── index.tsx             # Host UI operator app
+│   ├── index.tsx             # Host UI operator app with tabs
+│   ├── dashboard/            # Overview, performance, analytics, social images, checks
+│   └── configuration/        # Guided setup forms
 ├── src/                      # Content, discovery, schema, lifecycle, integrations
+│   ├── analytics.ts          # Tracking tags and CSP allowances for published pages
+│   └── og/                   # Social image templates, renderer, PNG encoder, fonts
 ├── server/
 │   └── index.ts              # QuickJS server entrypoint
 ├── scripts/
 │   ├── plugin.ts             # SDK setup, validation, build, and dev commands
+│   ├── og-font.py            # Bakes Inter glyph outlines for the image renderer
 │   └── release-version.ts    # Unique alpha version from run number and commit
 ├── tests/
-│   └── *.test.ts             # Content, lifecycle, integrations, release identity
+│   └── *.test.ts             # Content, lifecycle, integrations, analytics, social images
 ├── docs/
+│   ├── images/               # README screenshots and generated sample images
 │   ├── configuration.md      # Setup, typed options, integrations, alpha budgets
 │   ├── roadmap.md            # Completed delivery checklist and acceptance evidence
 │   └── research.md           # Dated primary-source search guidance

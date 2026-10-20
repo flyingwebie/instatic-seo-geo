@@ -47,6 +47,14 @@ export default definePlugin({
       ],
     },
     {
+      id: "images",
+      title: "Social images",
+      fields: [
+        { id: "key", label: "Key", type: "text", required: true },
+        { id: "content", label: "PNG (base64)", type: "longtext", required: true },
+      ],
+    },
+    {
       id: "state",
       title: "Generation state",
       fields: [
@@ -77,6 +85,24 @@ export default definePlugin({
       label: "Publish optional llms.txt",
       type: "toggle",
       default: false,
+    },
+    {
+      id: "analytics",
+      label: "Analytics & tracking tags (optional)",
+      type: "textarea",
+      rows: 4,
+      description:
+        "Managed on the SEO, GEO & AIO page under Analytics & tags. Google Analytics, Tag Manager or any pasted tracking snippet.",
+      default: "{}",
+    },
+    {
+      id: "ogTemplate",
+      label: "Social image design (optional)",
+      type: "textarea",
+      rows: 4,
+      description:
+        "Managed on the SEO, GEO & AIO page under Social images. Generates a 1200×630 sharing image for each page.",
+      default: "{}",
     },
     {
       id: "indexNowEnabled",
