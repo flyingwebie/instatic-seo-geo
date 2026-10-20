@@ -4,6 +4,12 @@ All notable changes to this plugin. Versions follow [Semantic Versioning](https:
 
 This plugin is **unofficial** and independently maintained.
 
+## [Unreleased]
+
+### Changed
+
+- Releases are published by the single "Validate and release" workflow: a new `package.json` version on `main` becomes the repository's Latest release. Other pushes to `main` no longer publish snapshot releases.
+
 ## [1.0.0-beta.0] - 2026-10-20
 
 First beta. The plugin is feature-complete for the compatible Instatic host build.
