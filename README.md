@@ -95,7 +95,7 @@ The **Setup** tab holds the guided configuration: website address, per-page meta
 | Standalone project     | Bun tooling, strict TypeScript, ESLint, and local SDK setup                                   | ✅ Available           |
 | ZIP packaging          | Host CLI produces a manifest and a self-contained server bundle                               | ✅ Available           |
 | Sandbox entrypoint     | QuickJS activation and a `plugins.read`-gated status endpoint                                 | ✅ Available           |
-| Release automation     | PR validation, snapshot builds from `main`, and a release whenever the version changes        | ✅ Configured          |
+| Release automation     | PR validation and a Latest release whenever the `package.json` version changes               | ✅ Configured          |
 | Markdown publishing    | Published pages, articles, and explicitly allowlisted public collection entries               | ✅ Implemented · beta  |
 | XML sitemaps           | Canonical HTML routes, meaningful modification dates, partitioning                            | ✅ Implemented · beta  |
 | SEO metadata           | Titles, descriptions, canonical/robots controls, and social previews                          | ✅ Implemented · beta  |
@@ -285,25 +285,25 @@ Set these variables in your shell or local Bun environment configuration. Enviro
 
 ### Automated builds and releases
 
-Two GitHub Actions workflows build and publish the plugin. Both use Bun `1.4.2` and a pinned Instatic SDK revision, install locked dependencies, run lint and the full test suite, typecheck and build the real plugin ZIP, verify it inside QuickJS and check the archive. Failed validation prevents publication. Third-party Actions are pinned to commit SHAs.
+One GitHub Actions workflow, [`ci-release.yml`](.github/workflows/ci-release.yml) ("Validate and release"), builds and publishes the plugin. Every run uses Bun `1.4.2` and a pinned Instatic SDK revision, installs locked dependencies, runs lint and the full test suite, typechecks and builds the real plugin ZIP, verifies it inside QuickJS and checks the archive. Failed validation prevents publication. Third-party Actions are pinned to commit SHAs.
 
-| Trigger                                   | Workflow                                                            | Result after validation passes                                    |
-| ----------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Pull request                              | [`ci-release.yml`](.github/workflows/ci-release.yml)                 | Downloadable ZIP build artifact, retained for 14 days             |
-| **Version change in `package.json` on `main`** | [`release-on-version.yml`](.github/workflows/release-on-version.yml) | **Release `v<version>`** with the matching ZIP                     |
-| Any other update to `main`                | `ci-release.yml`                                                    | Snapshot **prerelease**, e.g. `v1.0.0-beta.57.gabcdef0`           |
-| Version tag pushed by hand, e.g. `v1.0.0` | `ci-release.yml`                                                    | Release for that exact version (if not already published)         |
-| Manual run                                | either                                                              | Retry: publish the package version, or build a snapshot/artifact  |
+| Trigger                                         | Result after validation passes                                      |
+| ----------------------------------------------- | ------------------------------------------------------------------- |
+| Pull request                                    | Downloadable ZIP build artifact, retained for 14 days               |
+| Push to `main` with a **new** `package.json` version | **Release `v<version>`**, marked as the repository's **Latest** release |
+| Push to `main` with an already released version | Build artifact only; no new release                                 |
+| Version tag pushed by hand, e.g. `v1.0.0`       | Release for that exact version (if not already published)           |
+| Manual run on `main`                            | Same as a push: publishes the version if it is new                  |
 
 #### Publishing a new version
 
 1. In a pull request, change `version` in `package.json`, for example `1.0.0-beta.0` → `1.0.0-beta.1`, or `1.0.0` for the stable release. Add the changes to [`CHANGELOG.md`](CHANGELOG.md).
 2. Merge the pull request into `main`.
-3. `release-on-version.yml` sees that tag `v<version>` does not exist yet, validates the merged commit, builds the ZIP with that exact manifest version and publishes the GitHub release. No manual tagging is needed.
+3. The workflow sees that tag `v<version>` does not exist yet, validates the merged commit, builds the ZIP with that exact manifest version and publishes it as the **Latest** release, with the version's changelog section at the top of the notes. No manual tagging is needed.
 
-Supported versions are `X.Y.Z` (stable) and `X.Y.Z-alpha.N`, `X.Y.Z-beta.N` or `X.Y.Z-rc.N` (prereleases). Alpha, beta and release-candidate versions are published as GitHub **prereleases**; only stable versions become the repository's **Latest** release. Publishing is idempotent: an existing tag or release is never replaced, and a failed run can be re-run from the Actions tab.
+Supported versions are `X.Y.Z` and `X.Y.Z-alpha.N`, `X.Y.Z-beta.N` or `X.Y.Z-rc.N`. Beta and release-candidate versions are labelled in the release title (for example "SEO, GEO & AIO v1.0.0-beta.0 (beta)") but are still published as the Latest release, so the newest ZIP is always the one in the repository sidebar and at `/releases/latest`. Publishing is idempotent: an existing tag or release is never replaced, and a failed run can be re-run from the Actions tab.
 
-Snapshot builds from `main` sort after the version they were built from: `1.0.0-beta.0` produces `1.0.0-beta.<run>.g<sha>`, and a stable `1.0.0` produces `1.0.0-build.<run>.g<sha>`. Open [all releases](https://github.com/flyingwebie/instatic-seo-geo/releases) to find prerelease downloads; `/releases/latest` only shows stable versions.
+Builds that do not publish a release still upload their ZIP as a workflow artifact, versioned after the package, for example `1.0.0-beta.57.gabcdef0`.
 
 Every release contains:
 
@@ -311,7 +311,7 @@ Every release contains:
 - `SHA256SUMS` — checksums for the ZIP and build information.
 - `build-info.json` — plugin version, release channel, source commit, SDK commit and Bun version.
 
-Automation uses GitHub's built-in token; no custom release secret is required. Only the release jobs get write access to repository contents. Tags created by that token do not trigger further workflow runs, as described in [GitHub's trigger documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow). Update `INSTATIC_REF` in `ci-release.yml` when deliberately adopting a new host SDK revision.
+Automation uses GitHub's built-in token; no custom release secret is required. Only the release job gets write access to repository contents. Tags created by that token do not trigger further workflow runs, as described in [GitHub's trigger documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow). Update `INSTATIC_REF` in `ci-release.yml` when deliberately adopting a new host SDK revision.
 
 ### Troubleshooting
 
@@ -328,8 +328,7 @@ Automation uses GitHub's built-in token; no custom release secret is required. O
 ```text
 seo-geo/
 ├── .github/workflows/
-│   ├── ci-release.yml        # Validation, packaging, snapshot builds and tagged releases
-│   └── release-on-version.yml # Publishes a release when package.json changes version
+│   └── ci-release.yml        # Validation, packaging, and a release for each new version
 ├── instatic-plugin.config.ts  # Plugin identity and permission declarations
 ├── admin/
 │   ├── index.tsx             # Host UI operator app with tabs
