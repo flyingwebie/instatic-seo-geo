@@ -10,6 +10,10 @@ This plugin is **unofficial** and independently maintained.
 
 - Settings, analytics tags and the social image design can be saved before the public website address is set. **Save & generate** still needs the address, and a note under the buttons now explains why a button is disabled.
 
+### Changed
+
+- Releases are published by the single "Validate and release" workflow: a new `package.json` version on `main` becomes the repository's Latest release. Other pushes to `main` no longer publish snapshot releases.
+
 ## [1.0.0-beta.0] - 2026-10-20
 
 First beta. The plugin is feature-complete for the compatible Instatic host build.
