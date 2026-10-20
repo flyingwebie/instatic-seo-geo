@@ -305,7 +305,7 @@ export default definePluginAdminApp(function SeoGeo() {
   return (
     <Stack gap={16}>
       <Text variant="muted">
-        Unofficial alpha · Improves technical discoverability. Search providers decide indexing,
+        Unofficial beta · Improves technical discoverability. Search providers decide indexing,
         rankings and citations.
       </Text>
       <Tabs value={tab} onChange={setTab}>

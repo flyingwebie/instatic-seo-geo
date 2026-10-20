@@ -1,9 +1,9 @@
 {
   "name": "@instatic-plugins/seo-geo",
-  "version": "0.3.0-alpha.0",
+  "version": "1.0.0-beta.0",
   "private": true,
   "type": "module",
-  "description": "Unofficial alpha-test Instatic plugin for published-content Markdown, sitemaps, guided SEO/GEO/AIO setup, and Schema.org.",
+  "description": "Unofficial beta Instatic plugin for SEO metadata, Schema.org, AI-ready Markdown, sitemaps, analytics tags, search performance charts and generated social images.",
   "homepage": "https://github.com/flyingwebie/instatic-seo-geo#readme",
   "repository": {
     "type": "git",

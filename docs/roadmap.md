@@ -1,6 +1,6 @@
-# Alpha delivery checklist
+# Delivery checklist
 
-Every feature area originally listed in the README has an implementation. This remains **unofficial alpha testing**. Host compatibility, configuration, provider access, and the documented processing budgets matter; implementation is not a claim of rankings or universal indexing.
+Every feature area originally listed in the README has an implementation. This is an **unofficial beta** (1.0.0-beta.0). Host compatibility, configuration, provider access, and the documented processing budgets matter; implementation is not a claim of rankings or universal indexing.
 
 | Completed area              | Implementation                                                                                                                                | Acceptance evidence                                                                                      |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -37,6 +37,6 @@ The compatible host also runs `bun test`, `bun run lint`, and `bun run build`. T
 
 ## Operational scope
 
-See [configuration.md](configuration.md) for every supported option, integration setup, outputs, and alpha budgets. Larger-site processing above the limits and actual provider authorization are deployment-specific validation, not advertised completed certifications. Robots preferences are voluntary; AI citation activity needs separately observed evidence. Google/Bing reports do not measure a universal AI ranking or citation metric.
+See [configuration.md](configuration.md) for every supported option, integration setup, outputs, and processing budgets. Larger-site processing above the limits and actual provider authorization are deployment-specific validation, not advertised completed certifications. Robots preferences are voluntary; AI citation activity needs separately observed evidence. Google/Bing reports do not measure a universal AI ranking or citation metric.
 
 All repository changes go through feature branches and draft PRs. The companion [Instatic host foundation PR #8](https://github.com/flyingwebie/Instatic/pull/8) must be available before installing this plugin build. Public `main` and previously downloaded scaffold ZIPs do not acquire new features until the PRs are merged and a new package is built.

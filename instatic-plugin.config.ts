@@ -3,10 +3,10 @@ import packageInfo from "./package.json";
 
 export default definePlugin({
   id: "instatic.seo-geo",
-  name: "SEO, GEO & AIO (Unofficial Alpha)",
+  name: "SEO, GEO & AIO (Unofficial Beta)",
   version: process.env.INSTATIC_PLUGIN_VERSION || packageInfo.version,
   description:
-    "Unofficial alpha: published Markdown, sitemaps, guided SEO/GEO/AIO setup, Schema.org, audits, redirects, and webmaster reports.",
+    "Unofficial beta: published Markdown, sitemaps, guided SEO/GEO/AIO setup, Schema.org, audits, redirects, analytics tags, search charts and generated social images.",
   homepage: "https://github.com/flyingwebie/instatic-seo-geo#readme",
   repository: "https://github.com/flyingwebie/instatic-seo-geo",
   keywords: [

@@ -32,7 +32,7 @@ assert.deepEqual(
   parsePluginManifest(JSON.parse(archive.stdout.toString())),
   manifest,
 );
-assert.match(manifest.name, /Unofficial Alpha/);
+assert.match(manifest.name, /Unofficial Beta/);
 const source = await Bun.file("dist/server/index.js").text();
 const host = fakeHost([
   document("/"),

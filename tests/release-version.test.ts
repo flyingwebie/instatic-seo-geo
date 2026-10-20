@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { releaseVersion } from "../scripts/release-version";
+import { releaseChannel, releaseVersion } from "../scripts/release-version";
 
 const commitSha = "abcdef0123456789abcdef0123456789abcdef01";
 
@@ -48,18 +48,43 @@ describe("release identity", () => {
     }
   });
 
-  test("keeps stable, malformed and non-alpha package versions out of alpha releases", () => {
+  test("beta, release-candidate and stable versions get matching snapshots", () => {
+    expect(releaseVersion("1.0.0-beta.0", "57", commitSha)).toBe(
+      "1.0.0-beta.57.gabcdef0",
+    );
+    expect(releaseVersion("1.0.0-rc.2", "57", commitSha)).toBe(
+      "1.0.0-rc.57.gabcdef0",
+    );
+    expect(releaseVersion("1.0.0", "57", commitSha)).toBe(
+      "1.0.0-build.57.gabcdef0",
+    );
+    expect(
+      releaseVersion("1.0.0-beta.0", "57", commitSha, "v1.0.0-beta.0"),
+    ).toBe("1.0.0-beta.0");
+    expect(releaseVersion("1.0.0", "57", commitSha, "v1.0.0")).toBe("1.0.0");
+  });
+
+  test("reports the release channel of a package version", () => {
+    expect(releaseChannel("0.3.0-alpha.0")).toBe("alpha");
+    expect(releaseChannel("1.0.0-beta.0")).toBe("beta");
+    expect(releaseChannel("1.0.0-rc.1")).toBe("rc");
+    expect(releaseChannel("1.0.0")).toBe("stable");
+  });
+
+  test("rejects malformed package versions and unknown channels", () => {
     for (const version of [
       "",
-      "0.3.0",
-      "0.3.0-beta.0",
       "latest",
+      "1.0",
+      "1.0.0-preview.0",
+      "1.0.0-beta",
       "01.3.0-alpha.0",
       "0.3.0-alpha.01",
       "0.3.0-alpha.0\n",
+      "0.3.0-alpha.0.gabc1234",
     ]) {
       expect(() => releaseVersion(version, "42", commitSha)).toThrow(
-        "alpha prerelease",
+        "Package version must be",
       );
     }
   });

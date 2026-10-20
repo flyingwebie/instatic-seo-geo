@@ -427,7 +427,7 @@ export class PublicationService {
         const document = validate(PublishedDocumentSchema, raw);
         if (new TextEncoder().encode(document.html).byteLength > 1024 * 1024)
           throw new Error(
-            `Published HTML exceeds the alpha 1 MiB per-page processing limit: ${route.path}`,
+            `Published HTML exceeds the 1 MiB per-page processing limit: ${route.path}`,
           );
         const { page } = await generateDocument(
           document,
@@ -453,7 +453,7 @@ export class PublicationService {
             : 0);
         if (pending.bytes > 24 * 1024 * 1024)
           throw new Error(
-            "Generation exceeds the alpha 24 MiB document budget. Restrict the published collection allowlist.",
+            "Generation exceeds the 24 MiB document budget. Restrict the published collection allowlist.",
           );
         if (existing)
           await collection.update(existing.id, {
