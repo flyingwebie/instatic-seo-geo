@@ -10,7 +10,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Instatic-UNOFFICIAL-64748b" alt="Unofficial Instatic plugin" />
-  <img src="https://img.shields.io/badge/status-ALPHA_TEST-f59e0b" alt="Status: alpha testing" />
+  <img src="https://img.shields.io/badge/version-1.0.0--beta.0-0ea5e9" alt="Version 1.0.0-beta.0" />
+  <img src="https://img.shields.io/badge/status-BETA-8b5cf6" alt="Status: beta" />
   <img src="https://img.shields.io/badge/Bun-1.4.x-14151a" alt="Bun 1.4.x" />
   <img src="https://img.shields.io/badge/TypeScript-strict-3178c6" alt="Strict TypeScript" />
   <img src="https://img.shields.io/badge/Instatic-plugin_API_1-6366f1" alt="Instatic plugin API 1" />
@@ -22,7 +23,7 @@
   <a href="#features-and-status">Features</a> ·
   <a href="docs/roadmap.md">Roadmap</a> ·
   <a href="docs/research.md">Research</a> ·
-  <a href="https://github.com/flyingwebie/instatic-seo-geo/releases">Alpha releases</a> ·
+  <a href="https://github.com/flyingwebie/instatic-seo-geo/releases">Releases</a> ·
   <a href="https://github.com/flyingwebie/instatic-seo-geo/actions">Builds</a> ·
   <a href="https://github.com/flyingwebie/instatic-seo-geo/issues">Issues</a>
 </p>
@@ -34,9 +35,9 @@ An independently developed plugin for [Instatic](https://github.com/flyingwebie/
 The intended workflow is straightforward: publish your website, then generate accurate metadata, structured data, Markdown, and discovery files from the same published content.
 
 > [!IMPORTANT]
-> **This plugin is NOT official and is still in alpha testing.** It is independently maintained and is not an official Instatic product or release.
+> **This plugin is NOT official and is in beta.** It is independently maintained and is not an official Instatic product or release.
 >
-> **The complete planned feature set is implemented for alpha testing on the compatible host build.** It includes Markdown, discovery files, metadata, Schema.org, audits, redirects, multilingual validation, and optional integrations. Alpha status still applies: review the [configuration and limits](docs/configuration.md) before using it with real content.
+> **Version 1.0.0-beta.0 is feature-complete for the compatible host build.** It includes Markdown, discovery files, metadata, Schema.org, audits, redirects, multilingual validation, analytics tags, search charts, generated social images and optional integrations. Beta status applies: review the [configuration and limits](docs/configuration.md) before using it with real content.
 
 ## Why this project exists
 
@@ -94,27 +95,27 @@ The **Setup** tab holds the guided configuration: website address, per-page meta
 | Standalone project     | Bun tooling, strict TypeScript, ESLint, and local SDK setup                                   | ✅ Available           |
 | ZIP packaging          | Host CLI produces a manifest and a self-contained server bundle                               | ✅ Available           |
 | Sandbox entrypoint     | QuickJS activation and a `plugins.read`-gated status endpoint                                 | ✅ Available           |
-| Release automation     | PR validation and ZIP artifacts; alpha prereleases after successful updates to `main`         | ✅ Configured          |
-| Markdown publishing    | Published pages, articles, and explicitly allowlisted public collection entries               | ✅ Implemented · alpha |
-| XML sitemaps           | Canonical HTML routes, meaningful modification dates, partitioning                            | ✅ Implemented · alpha |
-| SEO metadata           | Titles, descriptions, canonical/robots controls, and social previews                          | ✅ Implemented · alpha |
-| Schema.org             | Site/page identity, publishers, articles, visible FAQs, and breadcrumbs                       | ✅ Implemented · alpha |
-| Content ZIP export     | Markdown, sitemap files, and a file-to-canonical-URL manifest                                 | ✅ Implemented · alpha |
-| Publication checks     | Indexability preflight and HTML/Markdown/schema consistency                                   | ✅ Implemented · alpha |
-| Redirects and links    | URL-change handling, orphan-page detection, and link suggestions                              | ✅ Implemented · alpha |
-| GEO discovery          | Separate search/training preferences and optional `llms.txt`                                  | ✅ Implemented · alpha |
-| Guided configuration   | Toggles, page selection, profiles, FAQs, schemas, redirects, languages and crawler forms      | ✅ Implemented · alpha |
-| AIO publication review | Local search/snippet checks, visible answer passages, topic headings, sources and attribution | ✅ Implemented · alpha |
-| Extended support       | IndexNow, multilingual validation, specialized schema, visibility reports                     | ✅ Implemented · alpha |
-| Dashboard and charts   | Overview, health trends, Search Console/Bing performance charts and quick wins                | ✅ Implemented · alpha |
-| Analytics tags         | GA4, Tag Manager or any pasted snippet, allowed through the page CSP by hash and host         | ✅ Implemented · alpha |
-| Social images          | Designed template rendered to a static 1200×630 PNG per page at `/og/<hash>.png`              | ✅ Implemented · alpha |
+| Release automation     | PR validation, snapshot builds from `main`, and a release whenever the version changes        | ✅ Configured          |
+| Markdown publishing    | Published pages, articles, and explicitly allowlisted public collection entries               | ✅ Implemented · beta  |
+| XML sitemaps           | Canonical HTML routes, meaningful modification dates, partitioning                            | ✅ Implemented · beta  |
+| SEO metadata           | Titles, descriptions, canonical/robots controls, and social previews                          | ✅ Implemented · beta  |
+| Schema.org             | Site/page identity, publishers, articles, visible FAQs, and breadcrumbs                       | ✅ Implemented · beta  |
+| Content ZIP export     | Markdown, sitemap files, and a file-to-canonical-URL manifest                                 | ✅ Implemented · beta  |
+| Publication checks     | Indexability preflight and HTML/Markdown/schema consistency                                   | ✅ Implemented · beta  |
+| Redirects and links    | URL-change handling, orphan-page detection, and link suggestions                              | ✅ Implemented · beta  |
+| GEO discovery          | Separate search/training preferences and optional `llms.txt`                                  | ✅ Implemented · beta  |
+| Guided configuration   | Toggles, page selection, profiles, FAQs, schemas, redirects, languages and crawler forms      | ✅ Implemented · beta  |
+| AIO publication review | Local search/snippet checks, visible answer passages, topic headings, sources and attribution | ✅ Implemented · beta  |
+| Extended support       | IndexNow, multilingual validation, specialized schema, visibility reports                     | ✅ Implemented · beta  |
+| Dashboard and charts   | Overview, health trends, Search Console/Bing performance charts and quick wins                | ✅ Implemented · beta  |
+| Analytics tags         | GA4, Tag Manager or any pasted snippet, allowed through the page CSP by hash and host         | ✅ Implemented · beta  |
+| Social images          | Designed template rendered to a static 1200×630 PNG per page at `/og/<hash>.png`              | ✅ Implemented · beta  |
 
 See the [implementation roadmap](docs/roadmap.md) for sequencing, host dependencies, and acceptance criteria.
 
 ## Quick start
 
-The **0.3 alpha** adds guided configuration and AIO publication checks. Download the matching build from the PR artifacts while it is under review; after merge, GitHub Actions publishes a new alpha prerelease automatically.
+**1.0.0-beta.0** is the first beta: guided configuration and AIO checks, plus the dashboard with trend charts, Search Console and Bing performance reports, analytics and tracking tags, and generated social images with 20 templates and logo support. See the [changelog](CHANGELOG.md).
 
 ### Update Instatic before uploading
 
@@ -130,7 +131,7 @@ Load the new template into the existing Postgres Coolify resource, retaining its
 
 **Download → upload → configure → generate.** Installation requires an account allowed to install/configure plugins.
 
-1. Open [Alpha releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download **`seo-geo.plugin.zip`** from a prerelease.
+1. Open [Releases](https://github.com/flyingwebie/instatic-seo-geo/releases) and download **`seo-geo.plugin.zip`** from the newest version, for example **v1.0.0-beta.0**.
 2. In Instatic, open **Admin → Plugins** and upload that ZIP.
 3. Review and approve the requested permissions, then confirm installation. Instatic validates, installs, and activates the plugin.
 4. Open **SEO, GEO & AIO → Website** and enter the domain serving your public pages, such as `https://www.example.com`. It can differ from your admin domain.
@@ -141,7 +142,7 @@ No JSON is needed for everyday setup. **Show advanced configuration JSON** provi
 
 The ZIP contains the plugin manifest and bundled code. Bun, Git, and the SDK checkout are development tools used to build the package from source. Keep the ZIP intact when uploading it.
 
-**These packages are unofficial alpha builds.** The installable plugin ZIP is separate from the generated content ZIP. See the [configuration guide](docs/configuration.md) for page metadata, real author/publisher profiles, FAQs, redirects, translations, crawler policies, and integrations.
+**These packages are unofficial beta builds.** The installable plugin ZIP is separate from the generated content ZIP. See the [configuration guide](docs/configuration.md) for page metadata, real author/publisher profiles, FAQs, redirects, translations, crawler policies, and integrations.
 
 ### Check the installation
 
@@ -151,7 +152,7 @@ While signed in with the `plugins.read` capability, open:
 /admin/api/cms/plugins/instatic.seo-geo/runtime/status
 ```
 
-The response identifies the unofficial alpha version and reports configuration, generation progress, current eligible pages, and concrete findings. Public files appear after generation:
+The response identifies the unofficial beta version and reports configuration, generation progress, current eligible pages, and concrete findings. Public files appear after generation:
 
 - `/sitemap.xml` and partitioned `/sitemaps/<number>.xml` when needed.
 - `/robots.txt` with separate search, training, and user-retrieval preferences.
@@ -261,7 +262,7 @@ SDK commands refresh the local connection. Run `setup` after cloning or changing
 | ------------------------- | ------------------------------------------ | ----------------------------------------------------------------------- |
 | `INSTATIC_DIR`            | `../../Instatic`, relative to this project | Select the local host checkout used by the SDK and build CLI            |
 | `INSTATIC_UPLOADS_DIR`    | `<INSTATIC_DIR>/uploads`                   | Select the local upload directory used by `dev`                         |
-| `INSTATIC_PLUGIN_VERSION` | Version from `package.json`                | Override the built manifest version; CI supplies a unique alpha version |
+| `INSTATIC_PLUGIN_VERSION` | Version from `package.json`                | Override the built manifest version; CI supplies a unique snapshot or release version |
 
 For a different checkout location:
 
@@ -282,49 +283,35 @@ Set these variables in your shell or local Bun environment configuration. Enviro
 
 `dev` writes generated files into the selected local host directory. First installation and permission approval still happen through Admin → Plugins; subsequent builds are picked up on the host's next activation cycle. Build and lint do not install the plugin.
 
-### Automated builds and alpha releases
+### Automated builds and releases
 
-The [GitHub Actions workflow](.github/workflows/ci-release.yml) runs on pull requests (including stacked branches), every update to `main` (including documentation changes), version tags beginning with `v`, and manual dispatch. Every new version is published as a GitHub release with its uploadable ZIP after validation passes.
+Two GitHub Actions workflows build and publish the plugin. Both use Bun `1.4.2` and a pinned Instatic SDK revision, install locked dependencies, run lint and the full test suite, typecheck and build the real plugin ZIP, verify it inside QuickJS and check the archive. Failed validation prevents publication. Third-party Actions are pinned to commit SHAs.
 
-| Trigger                            | Result after validation passes                                           |
-| ---------------------------------- | ------------------------------------------------------------------------ |
-| Pull request                       | Downloadable ZIP build artifact, retained for 14 days                    |
-| Update to `main`                   | New GitHub **prerelease** with the validated plugin ZIP                  |
-| Version tag, e.g. `v0.3.1-alpha.0` | GitHub prerelease for that exact version, with the matching ZIP manifest |
-| Manual run on `main`               | New alpha prerelease for that commit                                     |
-| Manual run on a version tag        | Publish or retry that exact version                                      |
-| Manual run on another branch       | Build artifact for testing                                               |
+| Trigger                                   | Workflow                                                            | Result after validation passes                                    |
+| ----------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Pull request                              | [`ci-release.yml`](.github/workflows/ci-release.yml)                 | Downloadable ZIP build artifact, retained for 14 days             |
+| **Version change in `package.json` on `main`** | [`release-on-version.yml`](.github/workflows/release-on-version.yml) | **Release `v<version>`** with the matching ZIP                     |
+| Any other update to `main`                | `ci-release.yml`                                                    | Snapshot **prerelease**, e.g. `v1.0.0-beta.57.gabcdef0`           |
+| Version tag pushed by hand, e.g. `v1.0.0` | `ci-release.yml`                                                    | Release for that exact version (if not already published)         |
+| Manual run                                | either                                                              | Retry: publish the package version, or build a snapshot/artifact  |
 
-Each run installs locked dependencies, uses Bun `1.4.2` and a pinned Instatic SDK revision, runs lint and behavioral/release-version tests, typechecks and builds the actual plugin ZIP, verifies its QuickJS activation and output contracts, and checks the archive. Failed validation prevents publication. Third-party Actions are pinned to commit SHAs.
+#### Publishing a new version
 
-Automatic `main` builds use the package's base version, the workflow run number, and the commit's short SHA. For example:
+1. In a pull request, change `version` in `package.json`, for example `1.0.0-beta.0` → `1.0.0-beta.1`, or `1.0.0` for the stable release. Add the changes to [`CHANGELOG.md`](CHANGELOG.md).
+2. Merge the pull request into `main`.
+3. `release-on-version.yml` sees that tag `v<version>` does not exist yet, validates the merged commit, builds the ZIP with that exact manifest version and publishes the GitHub release. No manual tagging is needed.
 
-```text
-Plugin version: 0.3.0-alpha.42.gabcdef0
-Git tag:        v0.3.0-alpha.42.gabcdef0
-```
+Supported versions are `X.Y.Z` (stable) and `X.Y.Z-alpha.N`, `X.Y.Z-beta.N` or `X.Y.Z-rc.N` (prereleases). Alpha, beta and release-candidate versions are published as GitHub **prereleases**; only stable versions become the repository's **Latest** release. Publishing is idempotent: an existing tag or release is never replaced, and a failed run can be re-run from the Actions tab.
 
-To launch a named version, update `package.json` through a PR to an alpha version such as `0.3.1-alpha.0` and merge it. Tag the merged commit with that exact version:
-
-```bash
-git fetch origin main
-git tag v0.3.1-alpha.0 origin/main
-git push origin v0.3.1-alpha.0
-```
-
-The tag must exactly match `v` plus the package version and point to a commit already merged into `main`. The workflow builds the matching ZIP and publishes the release automatically. A failed check prevents publication and can be retried. The example version is illustrative; use the version declared in the merged commit's `package.json`.
-
-The tag and ZIP manifest identify the same version. Re-running a completed workflow preserves an existing release and its assets. A new `main` or manual branch run gets a new build version; a version-tag run always keeps the tag's exact version. Tags created by the workflow's built-in token do not recursively trigger another push workflow, as described in [GitHub's trigger documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow).
-
-Alpha releases are labeled **unofficial**, marked as prereleases, and never promoted to GitHub's latest stable release. Open [all plugin releases](https://github.com/flyingwebie/instatic-seo-geo/releases) to find their ZIP downloads; the repository sidebar and `/releases/latest` are not the alpha download list.
+Snapshot builds from `main` sort after the version they were built from: `1.0.0-beta.0` produces `1.0.0-beta.<run>.g<sha>`, and a stable `1.0.0` produces `1.0.0-build.<run>.g<sha>`. Open [all releases](https://github.com/flyingwebie/instatic-seo-geo/releases) to find prerelease downloads; `/releases/latest` only shows stable versions.
 
 Every release contains:
 
 - `seo-geo.plugin.zip` — uploadable plugin package.
 - `SHA256SUMS` — checksums for the ZIP and build information.
-- `build-info.json` — plugin version, source commit, SDK commit, Bun version, and unofficial alpha status.
+- `build-info.json` — plugin version, release channel, source commit, SDK commit and Bun version.
 
-Automation uses GitHub's built-in token; no custom release secret is required. Only the release job gets write access to repository contents. Update `INSTATIC_REF` in the workflow when deliberately adopting a new host SDK revision, and update the base version in `package.json` when advancing the plugin's release line.
+Automation uses GitHub's built-in token; no custom release secret is required. Only the release jobs get write access to repository contents. Tags created by that token do not trigger further workflow runs, as described in [GitHub's trigger documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow). Update `INSTATIC_REF` in `ci-release.yml` when deliberately adopting a new host SDK revision.
 
 ### Troubleshooting
 
@@ -341,7 +328,8 @@ Automation uses GitHub's built-in token; no custom release secret is required. O
 ```text
 seo-geo/
 ├── .github/workflows/
-│   └── ci-release.yml        # Validation, packaging, and alpha prereleases
+│   ├── ci-release.yml        # Validation, packaging, snapshot builds and tagged releases
+│   └── release-on-version.yml # Publishes a release when package.json changes version
 ├── instatic-plugin.config.ts  # Plugin identity and permission declarations
 ├── admin/
 │   ├── index.tsx             # Host UI operator app with tabs
@@ -355,12 +343,12 @@ seo-geo/
 ├── scripts/
 │   ├── plugin.ts             # SDK setup, validation, build, and dev commands
 │   ├── og-font.py            # Bakes Inter glyph outlines for the image renderer
-│   └── release-version.ts    # Unique alpha version from run number and commit
+│   └── release-version.ts    # Release channel and version for each CI build
 ├── tests/
 │   └── *.test.ts             # Content, lifecycle, integrations, analytics, social images
 ├── docs/
 │   ├── images/               # README screenshots and generated sample images
-│   ├── configuration.md      # Setup, typed options, integrations, alpha budgets
+│   ├── configuration.md      # Setup, typed options, integrations, processing budgets
 │   ├── roadmap.md            # Completed delivery checklist and acceptance evidence
 │   └── research.md           # Dated primary-source search guidance
 ├── package.json
@@ -416,7 +404,7 @@ The plugin does not require CMS write/publish/delete permissions. It refreshes e
 - Schema describes authored facts and visible content; diagnostics explain absent bylines, FAQs, and entity details.
 - Google/Bing credentials are encrypted secret settings and stay server-side. Reports measure supported search metrics, not universal AI citations.
 
-The alpha supports 1 MiB input HTML per page, 24 MiB staged document data, and 16 MiB uncompressed content per ZIP. Sitemaps partition at the protocol's 50,000-URL/50-MiB limits. Read [the operational details](docs/configuration.md#outputs-and-alpha-budgets).
+The plugin supports 1 MiB input HTML per page, 24 MiB staged document data, and 16 MiB uncompressed content per ZIP. Sitemaps partition at the protocol's 50,000-URL/50-MiB limits. Read [the operational details](docs/configuration.md#outputs-and-alpha-budgets).
 
 Use disposable local data for development and smoke tests. Local accounts, databases, uploads, and generated screenshots are not included in this repository or distributed plugin packages.
 
@@ -433,7 +421,7 @@ Measure crawling, indexing, organic traffic, conversions, and observed AI citati
 
 ## Roadmap and contributing
 
-The planned feature checklist is implemented and covered by alpha tests. See the [delivery checklist](docs/roadmap.md) for the source modules and acceptance evidence. The next work should be driven by reported bugs and measured behavior in compatible self-hosted installations.
+The planned feature checklist is implemented and covered by automated tests. See the [delivery checklist](docs/roadmap.md) for the source modules and acceptance evidence. The next work should be driven by reported bugs and measured behavior in compatible self-hosted installations.
 Before contributing:
 
 1. Read the [roadmap](docs/roadmap.md), [configuration](docs/configuration.md), and [research](docs/research.md).
@@ -446,7 +434,7 @@ Behavioral tests cover content conversion, metadata/schema, eligibility, transac
 
 ## License and relationship to Instatic
 
-A project license has not been selected yet. **This plugin is NOT official and is still in alpha testing.** It is independently maintained and is not an official Instatic product or release.
+A project license has not been selected yet. **This plugin is NOT official and is in beta.** It is independently maintained and is not an official Instatic product or release.
 
 ---
 

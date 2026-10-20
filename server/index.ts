@@ -59,7 +59,7 @@ const plugin: ServerPluginModule = {
         pluginId: api.plugin.id,
         version: api.plugin.version,
         official: false,
-        channel: "alpha",
+        channel: "beta",
         features: {
           markdown: true,
           sitemap: true,

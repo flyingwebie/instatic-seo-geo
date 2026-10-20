@@ -101,7 +101,7 @@ async function checked(response: Response, provider: string) {
     );
   const text = await response.text();
   if (text.length > 2 * 1024 * 1024)
-    throw new Error(`${provider} response exceeds the alpha report budget.`);
+    throw new Error(`${provider} response exceeds the report size limit.`);
   try {
     return JSON.parse(text) as unknown;
   } catch {

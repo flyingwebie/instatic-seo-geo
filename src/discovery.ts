@@ -105,7 +105,7 @@ export function robotsTxt(origin: string, options: SiteOptions): string {
       : "Disallow: /") +
     "\n\n";
   return (
-    "# SEO & GEO — unofficial alpha. Robots preferences are voluntary; they are not access control.\n" +
+    "# SEO & GEO — unofficial beta. Robots preferences are voluntary; they are not access control.\n" +
     group(["*"], options.searchAllowed !== false) +
     group(
       ["OAI-SearchBot", "Claude-SearchBot", "Googlebot", "Bingbot"],
@@ -218,7 +218,7 @@ export function contentZip(
   );
   if (size > 16 * 1024 * 1024)
     throw new Error(
-      "Content ZIP exceeds the alpha 16 MiB uncompressed limit. Download individual Markdown files or exclude large collections.",
+      "Content ZIP exceeds the 16 MiB uncompressed limit. Download individual Markdown files or exclude large collections.",
     );
   return zipSync(files, { level: 6, mtime: new Date("1980-01-01T00:00:00Z") });
 }

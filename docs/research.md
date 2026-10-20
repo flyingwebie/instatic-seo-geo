@@ -83,7 +83,7 @@ Bing's AI Performance public preview reports citations, cited pages, sampled gro
 
 ## Related
 
-- [roadmap.md](roadmap.md) — completed alpha delivery checklist.
+- [roadmap.md](roadmap.md) — completed delivery checklist.
 - [Project README](../README.md) — setup, local SDK connection, and ZIP build commands.
 - In the Instatic checkout: `docs/features/plugin-system.md` and `docs/features/publisher.md` describe the existing plugin lifecycle, permissions, published routing, and rendering.
 - External source-of-truth documents are linked beside their claims; this reference defines no Instatic API or new architecture gate.

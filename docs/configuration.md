@@ -1,6 +1,6 @@
 # Configuration guide
 
-This is an **unofficial alpha-test plugin**. Before uploading, deploy a compatible Instatic server and admin build containing the publication SDK from [host PR #8](https://github.com/flyingwebie/Instatic/pull/8) and the PostgreSQL storage fix from [host PR #12](https://github.com/flyingwebie/Instatic/pull/12), both merged into host `main`. The [installation requirements and manifest-error recovery steps](../README.md#update-instatic-before-uploading) explain how to update an existing deployment. An older running host rejects `cms.routes.site` and `cms.publication.read` with `Invalid plugin manifest: Expected union value`.
+This is an **unofficial beta plugin**. Before uploading, deploy a compatible Instatic server and admin build containing the publication SDK from [host PR #8](https://github.com/flyingwebie/Instatic/pull/8) and the PostgreSQL storage fix from [host PR #12](https://github.com/flyingwebie/Instatic/pull/12), both merged into host `main`. The [installation requirements and manifest-error recovery steps](../README.md#update-instatic-before-uploading) explain how to update an existing deployment. An older running host rejects `cms.routes.site` and `cms.publication.read` with `Invalid plugin manifest: Expected union value`.
 
 Install the ZIP on that host, then open **SEO, GEO & AIO**. Everyday setup uses labelled fields, switches and example placeholders; no JSON is required. Set the public website origin and click **Save & generate** as described below.
 
@@ -130,7 +130,7 @@ Google access tokens, client secrets, refresh tokens, and Bing keys use Instatic
 
 These reports measure ordinary search activity. AI citation activity requires separately observed evidence; the plugin does not fabricate a universal AI citation metric. Robots preferences are voluntary and do not replace authentication. Search, training, and user retrieval settings produce separate provider groups; some user-triggered agents may not honor robots restrictions. llms.txt is optional interoperability, with no promised search benefit.
 
-## Outputs and alpha budgets
+## Outputs and processing budgets
 
 `/sitemap.xml` contains canonical HTML URLs; it becomes an index when URL sets exceed 50,000 entries or 50 MiB uncompressed UTF-8. Partitions live at `/sitemaps/1.xml`, etc. The homepage Markdown is `/markdown/index.md`; nested routes use `/markdown/<route>/index.md`. Eligible HTML advertises its generated Markdown through a `rel="alternate" type="text/markdown"` link. Markdown carries `noindex` and a canonical Link header. Discovery responses use `no-store` so retraction is checked on every request.
 
@@ -138,4 +138,4 @@ These reports measure ordinary search activity. AI citation activity requires se
 
 Generation is resumable in three-route batches and staged in plugin-owned storage. The current pointer is committed only after the complete stage is validated and published HTML refreshed. Failed rebuilds retain the previous generation; current route/configuration checks still retract ineligible content. Schedules resume automatically after restarts. Old stages are cleaned incrementally.
 
-The alpha limits are **1 MiB input HTML per processed page**, **24 MiB serialized generated documents per stage**, and **16 MiB uncompressed content per ZIP**. They protect the host's 64 MiB QuickJS heap and five-second ordinary-call budget. Individual Markdown and partitioned sitemaps remain available when a content ZIP is too large. Limit collection allowlists for larger sites. Processing above these bounds, provider credential provisioning, and real-world ranking outcomes are not certified by this alpha.
+The processing limits are **1 MiB input HTML per processed page**, **24 MiB serialized generated documents per stage**, and **16 MiB uncompressed content per ZIP**. They protect the host's 64 MiB QuickJS heap and five-second ordinary-call budget. Individual Markdown and partitioned sitemaps remain available when a content ZIP is too large. Limit collection allowlists for larger sites. Processing above these bounds, provider credential provisioning, and real-world ranking outcomes are not certified by this alpha.
