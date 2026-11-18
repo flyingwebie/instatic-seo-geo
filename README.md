@@ -88,6 +88,28 @@ Publication checks with plain-language fixes, the AI Overview publication review
 
 The **Setup** tab holds the guided configuration: website address, per-page metadata, business and author profiles, redirects, languages, crawler preferences and AIO options.
 
+## When something looks stuck
+
+The banner above the tabs (also answered at `/status` as `lifecycle`) always says what is happening and what to do next:
+
+| Banner                | Meaning                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| **Not set up**        | No public website address saved yet. Open **Setup → Website**.                                     |
+| **Not generated yet** | Configured, but nothing has run. Click **Save & generate**.                                         |
+| **Generating**        | A run is in progress, with a step and a page count. It continues on its own even if you close the tab. |
+| **Update waiting**    | Published content or a setting changed since the last run. Click **Save & generate**, or wait for the next automatic run (every minute). |
+| **Up to date**        | Nothing to do.                                                                                       |
+
+**Saving analytics tags or a social image design never breaks the sitemap.** Those two settings only change published HTML; `/sitemap.xml`, `/llms.txt` and the Markdown exports keep answering with the last good generation while the affected pages are refreshed underneath them. Saving the website address, the page/redirect/language/crawler options, or turning `llms.txt` on or off does invalidate the exports immediately, because those settings decide what the exports contain.
+
+**A 503 on `/sitemap.xml`, `/llms.txt` or `/markdown/*`** means there is no servable generation right now — either nothing has ever completed, or a setting that affects the exports just changed. It carries `Retry-After: 60` and an `X-Seo-Geo-Reason` header (`not-generated` or `settings-changed`) so a script or an on-call person can tell the two apart without opening the admin page. It clears itself as soon as the next generation reaches its commit step; `/robots.txt` is unaffected either way, since it only depends on settings.
+
+**"Pages skipped" in Checks** means one or more pages (or their social image) failed the same step three times in a row during the last run. A skipped page is left out of the sitemap and exports until it's fixed and generated again; a skipped image just means that page keeps its own existing `og:image` instead of the generated one. Everything else in the run still completes.
+
+**If the banner says background updates aren't running**, the plugin's own scheduled job hasn't been seen in 15 minutes. Instatic pauses a plugin's schedule after five failed runs in a row, and only an operator can resume it: open **Admin → Plugins → SEO, GEO & AIO → Schedules** and resume **`publication-sync`**. Clicking **Save & generate** once in the meantime still updates everything through this page.
+
+See [the state machines](docs/state-machines.md) for exactly how generation, serving and the schedule fit together, and [AGENTS.md](AGENTS.md) for the sandbox rules and invariants behind them.
+
 ## Features and status
 
 | Capability             | Scope                                                                                         | Status                 |
@@ -183,7 +205,7 @@ Every template above was drawn by the plugin's own renderer, exactly as it would
 
 **Social images** in the admin page offers a gallery of 20 ready-made templates (ten layouts such as card, split panel, sidebar, highlighter and quote, combined with patterns like mesh glows, waves, rings and stripes), previewed live with your own page and logo. Pick one, then fine-tune layout, colours, title size, weight and case, and which details to show. A logo can be chosen from the media library (read through the admin's own media endpoint with the signed-in session) or uploaded from the computer; the browser converts any format, including SVG and WebP, into a trimmed bitmap that the sandbox stores by content hash. The live preview uses the same renderer as the server, so it matches the published image exactly.
 
-During **Save & generate** the plugin renders one PNG per page between the document and HTML refresh phases. Rendering takes about a second per image inside the QuickJS sandbox, so manual generation works in short time-boxed batches; scheduled generation does the rest. File names are content hashes of the design and the page's text, so unchanged pages are never re-rendered, social networks see a new URL when a title changes, and files are served with long-lived caching. Images no page uses any more are removed after the next completed generation.
+During **Save & generate** the plugin renders one PNG per page between the document and HTML refresh phases. Rendering takes about a second per image inside the QuickJS sandbox, so manual generation works in short time-boxed batches; if a page's image keeps timing out, the plugin switches to a faster encoding automatically, and if that still isn't enough it leaves the rest to the next scheduled run rather than blocking the page's other exports. File names are content hashes of the design and the page's text, so unchanged pages are never re-rendered, social networks see a new URL when a title changes, and files are served with long-lived caching. Images no page uses any more are removed after the next completed generation.
 
 A per-page image set under **Setup → Pages** always wins. In the default mode, pages that already declare their own `og:image` keep it; **Every page** mode replaces those too. Text uses Inter 4.1 (SIL Open Font License, `src/og/FONT-LICENSE.txt`), baked by `scripts/og-font.py` for Western and Central European Latin characters.
 
@@ -335,6 +357,7 @@ seo-geo/
 │   ├── dashboard/            # Overview, performance, analytics, social images, checks
 │   └── configuration/        # Guided setup forms
 ├── src/                      # Content, discovery, schema, lifecycle, integrations
+│   ├── lifecycle.ts          # One explicit generation state, from the stored records
 │   ├── analytics.ts          # Tracking tags and CSP allowances for published pages
 │   └── og/                   # Social image templates, renderer, PNG encoder, fonts
 ├── server/
@@ -348,8 +371,10 @@ seo-geo/
 ├── docs/
 │   ├── images/               # README screenshots and generated sample images
 │   ├── configuration.md      # Setup, typed options, integrations, processing budgets
+│   ├── state-machines.md     # Generation lifecycle, the batch pipeline, serving rules
 │   ├── roadmap.md            # Completed delivery checklist and acceptance evidence
 │   └── research.md           # Dated primary-source search guidance
+├── AGENTS.md                 # Commands, sandbox rules, and invariants for coding agents
 ├── package.json
 ├── bun.lock
 ├── tsconfig.json
@@ -423,7 +448,7 @@ Measure crawling, indexing, organic traffic, conversions, and observed AI citati
 The planned feature checklist is implemented and covered by automated tests. See the [delivery checklist](docs/roadmap.md) for the source modules and acceptance evidence. The next work should be driven by reported bugs and measured behavior in compatible self-hosted installations.
 Before contributing:
 
-1. Read the [roadmap](docs/roadmap.md), [configuration](docs/configuration.md), and [research](docs/research.md).
+1. Read the [roadmap](docs/roadmap.md), [configuration](docs/configuration.md), [research](docs/research.md), [state machines](docs/state-machines.md), and [AGENTS.md](AGENTS.md).
 2. Open an [issue](https://github.com/flyingwebie/instatic-seo-geo/issues) for a proposal or bug report. Keep example content public or synthetic.
 3. Use a feature branch and a pull request with a clear problem statement and verification results.
 4. Run `bun run lint`, `bun run test`, and `bun run build`. Add meaningful tests as functional behavior is implemented.
