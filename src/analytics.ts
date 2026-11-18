@@ -5,6 +5,7 @@ import {
   type DefaultTreeAdapterMap,
 } from "parse5";
 import { elements, isElement, type HtmlElement } from "./html";
+import { toBase64 } from "./og/base64";
 import {
   AnalyticsError,
   analyticsActive,
@@ -128,9 +129,8 @@ async function sha256(value: string): Promise<string> {
     "SHA-256",
     new TextEncoder().encode(value),
   );
-  let binary = "";
-  for (const byte of new Uint8Array(digest)) binary += String.fromCharCode(byte);
-  return `'sha256-${btoa(binary)}'`;
+  // The plugin sandbox has no btoa; the shared codec works there and in the browser.
+  return `'sha256-${toBase64(new Uint8Array(digest))}'`;
 }
 
 function inlineBodies(markup: string[], tag: "script" | "style"): string[] {

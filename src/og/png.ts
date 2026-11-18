@@ -26,24 +26,42 @@ function chunk(type: string, body: Uint8Array): Uint8Array {
   return out;
 }
 
-/** Opaque RGB PNG. The "Up" filter makes flat and gradient areas compress well. */
-export function encodePng(c: Canvas, level: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 = 6): Uint8Array {
+/** Level used for social images; keeps every preset under 250 KB. */
+export const PNG_LEVEL = 6;
+/**
+ * About twice as fast to encode and up to half as large again. Used once a
+ * render has run out of time, so a slow server still gets its images.
+ */
+export const PNG_FAST_LEVEL = 1;
+
+/**
+ * Opaque RGB PNG. The "Up" filter makes flat and gradient areas compress well.
+ * Encoding is the slowest part of a social image in the sandbox, so the filter
+ * reads the canvas directly instead of copying each row twice.
+ */
+export function encodePng(
+  c: Canvas,
+  level: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 = PNG_LEVEL,
+): Uint8Array {
   const { width, height, data } = c;
   const stride = width * 3;
   const raw = new Uint8Array((stride + 1) * height);
-  let previous = new Uint8Array(stride);
-  const row = new Uint8Array(stride);
   for (let y = 0; y < height; y++) {
     let src = y * width * 4;
-    for (let x = 0; x < stride; x += 3, src += 4) {
-      row[x] = data[src]!;
-      row[x + 1] = data[src + 1]!;
-      row[x + 2] = data[src + 2]!;
-    }
-    const out = y * (stride + 1);
-    raw[out] = 2;
-    for (let x = 0; x < stride; x++) raw[out + 1 + x] = (row[x]! - previous[x]!) & 0xff;
-    previous = row.slice();
+    let out = y * (stride + 1);
+    raw[out++] = 2;
+    if (y === 0)
+      for (let x = 0; x < width; x++, src += 4) {
+        raw[out++] = data[src]!;
+        raw[out++] = data[src + 1]!;
+        raw[out++] = data[src + 2]!;
+      }
+    else
+      for (let x = 0, up = src - width * 4; x < width; x++, src += 4, up += 4) {
+        raw[out++] = (data[src]! - data[up]!) & 0xff;
+        raw[out++] = (data[src + 1]! - data[up + 1]!) & 0xff;
+        raw[out++] = (data[src + 2]! - data[up + 2]!) & 0xff;
+      }
   }
   const header = new Uint8Array(13);
   const view = new DataView(header.buffer);

@@ -34,12 +34,23 @@ assert.deepEqual(
 );
 assert.match(manifest.name, /Unofficial Beta/);
 const source = await Bun.file("dist/server/index.js").text();
+// Published pages carry the host's Content-Security-Policy, which the
+// analytics feature has to extend with a hash of each inline tag.
+const withPolicy = (page: ReturnType<typeof document>) => ({
+  ...page,
+  html: page.html.replace(
+    "<head>",
+    `<head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self';">`,
+  ),
+});
 const host = fakeHost([
-  document("/"),
-  document(
-    "/posts/alpha",
-    "<main><h1>Alpha article</h1><p>Published article body.</p></main>",
-    { kind: "entry", tableSlug: "posts" },
+  withPolicy(document("/")),
+  withPolicy(
+    document(
+      "/posts/alpha",
+      "<main><h1>Alpha article</h1><p>Published article body.</p></main>",
+      { kind: "entry", tableSlug: "posts" },
+    ),
   ),
 ]);
 const registrations: string[] = [];
@@ -47,6 +58,17 @@ let sequence = 0;
 let filterId = "";
 const refreshedHtml: string[] = [];
 host.values.googleClientSecret = "disposable-local-secret";
+// Tags with inline code and generated social images are the two features
+// that only fail inside the sandbox (missing browser globals, the per-step
+// time limit), so the real VM must run them. A sandbox reads its settings
+// when it starts and this harness has no host to push later changes into it,
+// so the values the configure route saves below are also given at start-up.
+const settings = {
+  options: '{"aioEnabled":true}',
+  analytics: JSON.stringify({ ga4Id: "G-VERIFY1234" }),
+  ogTemplate: JSON.stringify({ enabled: true, mode: "always" }),
+};
+Object.assign(host.values, settings);
 const env = {
   pluginId: manifest.id,
   manifestVersion: manifest.version,
@@ -177,32 +199,49 @@ try {
       "POST",
       JSON.stringify({
         siteUrl: "https://example.com",
-        options: '{"aioEnabled":true}',
         llmsEnabled: false,
+        ...settings,
       }),
     ),
   );
   assert.deepEqual(configured, { ok: true });
+  assert.deepEqual(
+    [host.values.options, host.values.analytics, host.values.ogTemplate],
+    [settings.options, settings.analytics, settings.ogTemplate],
+  );
   assert.equal(host.values.googleClientSecret, "disposable-local-secret");
   let progress = validate(
     ProgressSchema,
     await vm.runRoute("POST:/generate", context("/generate", "POST", "{}")),
   );
-  for (let i = 0; !progress.done && i < 20; i++)
+  for (let i = 0; !progress.done && i < 40; i++)
     progress = validate(
       ProgressSchema,
       await vm.runRoute("POST:/generate", context("/generate", "POST", "{}")),
     );
   assert.equal(progress.done, true);
   assert.equal(refreshedHtml.length, 2);
-  assert.ok(
-    refreshedHtml.every(
+  const expected: Array<[string, (html: string) => boolean]> = [
+    ["canonical link", (html) => html.includes('rel="canonical"')],
+    ["structured data", (html) => html.includes("application/ld+json")],
+    ["Markdown link", (html) => html.includes('type="text/markdown"')],
+    [
+      "analytics tag",
+      (html) => html.includes("googletagmanager.com/gtag/js?id=G-VERIFY1234"),
+    ],
+    [
+      "analytics tag hash in the page policy",
+      (html) => /script-src[^;]*'sha256-[A-Za-z0-9+/]{43}='/.test(html),
+    ],
+    [
+      "generated social image",
       (html) =>
-        html.includes('rel="canonical"') &&
-        html.includes("application/ld+json") &&
-        html.includes('type="text/markdown"'),
-    ),
-  );
+        /og:image" content="https:\/\/example\.com\/og\/[a-f0-9]{24}\.png"/.test(html),
+    ],
+  ];
+  for (const [what, check] of expected)
+    for (const html of refreshedHtml)
+      assert.ok(check(html), "Refreshed page is missing its " + what);
   assert.ok(refreshedHtml.some((html) => html.includes('"@type":"Article"')));
   assert.equal(
     validate(StatusSchema, await vm.runRoute("GET:/status", context("/status")))
@@ -213,6 +252,9 @@ try {
     StatusSchema,
     await vm.runRoute("GET:/status", context("/status")),
   );
+  assert.equal(aioStatus.lifecycle?.state, "ready");
+  assert.equal(aioStatus.lifecycle?.serving, "exports");
+  assert.deepEqual(aioStatus.lifecycle?.skipped, []);
   assert.ok(aioStatus.pages.every((page) => page.aio?.checks.length === 5));
   const raw = Type.Object({
     __response: Type.Boolean(),
@@ -239,7 +281,7 @@ try {
   );
   assert.equal(zip.bodyEncoding, "base64");
   assert.equal(Buffer.from(zip.body, "base64").subarray(0, 2).toString(), "PK");
-  host.setDocuments([document("/")]);
+  host.setDocuments([withPolicy(document("/"))]);
   assert.equal(
     validate(
       raw,
@@ -263,5 +305,5 @@ try {
   denied.dispose();
 }
 console.info(
-  "QuickJS verified: real ZIP/manifest, activation, permission rejection, staged generation, sitemap, Markdown, binary ZIP, and immediate retraction.",
+  "QuickJS verified: real ZIP/manifest, activation, permission rejection, staged generation with analytics tags and social images, sitemap, Markdown, binary ZIP, and immediate retraction.",
 );

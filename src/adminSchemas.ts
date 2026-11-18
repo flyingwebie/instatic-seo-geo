@@ -1,6 +1,7 @@
 import { Type, type Static } from "@sinclair/typebox";
 import { FindingSchema } from "./config";
 import { AioReportSchema } from "./aio";
+import { LifecycleSchema } from "./lifecycle";
 export const PageChoicesSchema = Type.Array(
   Type.Object({
     path: Type.String(),
@@ -41,6 +42,8 @@ export const StatusSchema = Type.Object({
       aio: Type.Optional(AioReportSchema),
     }),
   ),
+  /** The explicit generation state. `stage` and `pending` are kept for older clients. */
+  lifecycle: Type.Optional(LifecycleSchema),
 });
 export const ProgressSchema = Type.Object({
   done: Type.Boolean(),
@@ -50,6 +53,10 @@ export const ProgressSchema = Type.Object({
   refreshed: Type.Optional(Type.Integer()),
   images: Type.Optional(Type.Integer()),
   imageTotal: Type.Optional(Type.Integer()),
+  /** Another batch is running; poll again instead of treating it as a failure. */
+  busy: Type.Optional(Type.Boolean()),
+  /** The step is left to the background job; poll again and show its progress. */
+  deferred: Type.Optional(Type.Boolean()),
 });
 export const IndexNowResultSchema = Type.Object({
   enabled: Type.Boolean(),

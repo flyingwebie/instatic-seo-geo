@@ -40,12 +40,20 @@ import { Checks } from "./dashboard/Checks";
 import { SocialImages } from "./dashboard/SocialImages";
 import { parseOgTemplate, resolveTemplate, type OgTemplate } from "../src/og/template";
 import { Section } from "./dashboard/ui";
+import { LifecycleNotice } from "./dashboard/Lifecycle";
 
 const CachedReportSchema = Type.Object({
   report: Type.Union([VisibilityReportSchema, Type.Null()]),
 });
 const message = (error: unknown) =>
   error instanceof Error ? error.message : "Unknown error.";
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** How long this page waits for a batch started elsewhere before stepping back. */
+const BUSY_POLLS = 40;
+/** Thrown inside the generate loop when the user paused during a retry. */
+const PAUSED = new Error("paused");
+const PAUSED_TEXT =
+  "Foreground generation paused. Saved progress can resume; automatic background generation may continue.";
 
 function initialAnalytics(raw: unknown): { value: AnalyticsOptions; error: string } {
   try {
@@ -186,13 +194,34 @@ export default definePluginAdminApp(function SeoGeo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Generation also runs in the background and in other tabs. While work is
+  // outstanding and this page is not driving it, keep the status current so
+  // the page never claims "not generated" during a run it cannot see.
+  const outstanding =
+    status?.lifecycle?.state === "generating" || status?.lifecycle?.state === "outdated";
+  useEffect(() => {
+    if (!outstanding || busy) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      // What this page said about its own last run no longer describes the
+      // work now happening elsewhere.
+      setProgress("");
+      refresh().catch(() => {});
+    }, 10000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outstanding, busy]);
+
   const perform = async (operation: () => Promise<void>) => {
     setBusy(true);
     try {
       await operation();
       await refresh();
     } catch (error) {
-      errorToast(error);
+      if (error === PAUSED) setProgress(PAUSED_TEXT);
+      else errorToast(error);
+      // The status explains a failed generation better than the toast.
+      await refresh().catch(() => {});
     } finally {
       setBusy(false);
       setGenerating(false);
@@ -226,16 +255,59 @@ export default definePluginAdminApp(function SeoGeo() {
       pause.current = false;
       await save();
       let previousCheckpoint = "";
-      let result = await routes.json("/generate", ProgressSchema, {
-        method: "POST",
-        body: "{}",
-      });
+      let stalled = 0;
+      let waited = 0;
+      // The server retries a failing step and skips a page or image after
+      // three tries, so one failed batch is not the end of the run.
+      const batch = async () => {
+        for (let failures = 1; ; failures++)
+          try {
+            return await routes.json("/generate", ProgressSchema, {
+              method: "POST",
+              // Tells the server this page understands waiting results.
+              body: '{"client":2}',
+            });
+          } catch (error) {
+            if (pause.current) throw PAUSED;
+            if (failures > 4) throw error;
+            setProgress(`A step failed and is being retried (${failures} of 4): ${message(error)}`);
+            await wait(1000);
+          }
+      };
+      let result = await batch();
       while (!result.done) {
         const checkpoint = `${result.phase}:${result.offset}:${result.refreshed ?? 0}:${result.images ?? 0}`;
-        if (checkpoint === previousCheckpoint)
-          throw new Error(
-            "Generation did not advance. Check the Instatic core version and retry after resolving the host error.",
+        if (result.busy || result.deferred) {
+          // The background job or another tab is doing this step: follow its
+          // progress instead of failing, and step back if it takes long.
+          if (++waited > BUSY_POLLS) {
+            setProgress(
+              "Generation is running in the background and continues on its own. This page shows its progress.",
+            );
+            return;
+          }
+          setProgress(
+            result.deferred
+              ? `Social images are being created in the background: ${result.images ?? 0} of ${result.imageTotal ?? 0}.`
+              : `Generation is already running in the background: ${result.offset} of ${result.total} pages read, ${result.refreshed ?? 0} refreshed.`,
           );
+          await wait(1500);
+          if (pause.current) {
+            setProgress(PAUSED_TEXT);
+            return;
+          }
+          result = await batch();
+          continue;
+        } else {
+          waited = 0;
+          // A step that fails is retried, and skipped after three tries, so a
+          // few repeats are normal. Many repeats mean nothing can advance.
+          stalled = checkpoint === previousCheckpoint ? stalled + 1 : 0;
+          if (stalled > 6)
+            throw new Error(
+              "Generation is not advancing. The status at the top of this page shows the step that fails and what to do next.",
+            );
+        }
         previousCheckpoint = checkpoint;
         setProgress(
           result.phase === "html"
@@ -245,15 +317,10 @@ export default definePluginAdminApp(function SeoGeo() {
               : `Generating discovery content: ${result.offset} of ${result.total} pages.`,
         );
         if (pause.current) {
-          setProgress(
-            "Foreground generation paused. Saved progress can resume; automatic background generation may continue.",
-          );
+          setProgress(PAUSED_TEXT);
           return;
         }
-        result = await routes.json("/generate", ProgressSchema, {
-          method: "POST",
-          body: "{}",
-        });
+        result = await batch();
       }
       setProgress(`Generation completed: ${result.total} published routes.`);
       pushToast({ kind: "success", title: "Published content generated" });
@@ -328,6 +395,15 @@ export default definePluginAdminApp(function SeoGeo() {
         Unofficial beta · Improves technical discoverability. Search providers decide indexing,
         rankings and citations.
       </Text>
+      <LifecycleNotice
+        lifecycle={status?.lifecycle}
+        working={busy}
+        canGenerate={canGenerate}
+        blocked={saveHint}
+        onGenerate={generate}
+        onOpenSetup={() => setTab("setup")}
+        onOpenChecks={() => setTab("checks")}
+      />
       <Tabs value={tab} onChange={setTab}>
         <TabList ariaLabel="SEO, GEO & AIO sections">
           <Tab value="overview">Overview</Tab>
@@ -348,7 +424,7 @@ export default definePluginAdminApp(function SeoGeo() {
             analyticsActive={analyticsActive(JSON.parse(savedAnalytics) as AnalyticsOptions)}
             socialImagesOn={resolveTemplate(JSON.parse(savedOg) as OgTemplate).enabled}
             busy={busy || !canGenerate}
-            progress={progress}
+            progress={progress || (busy ? "" : saveHint)}
             onNavigate={setTab}
             onGenerate={generate}
           />
