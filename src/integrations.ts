@@ -133,7 +133,14 @@ async function submitIndexNowUnlocked(
       "IndexNow key must contain 8–128 letters, digits, or hyphens.",
     );
   const queue = await service.indexNowQueue();
-  const urls = queue.urls.filter((url) => new URL(url).origin === origin);
+  // One unreadable entry must not block every other queued address.
+  const urls = queue.urls.filter((url) => {
+    try {
+      return new URL(url).origin === origin;
+    } catch {
+      return false;
+    }
+  });
   if (!urls.length || (!manual && queue.nextAttempt > Date.now()))
     return { enabled: true, submitted: 0, remaining: urls.length, status: 0 };
   const batch = urls.slice(0, 10000);
@@ -216,13 +223,23 @@ export async function visibilityReport(
   if (provider === "google") {
     let token = api.cms.settings.get("googleAccessToken") ?? "";
     const refreshToken = api.cms.settings.get("googleRefreshToken") ?? "";
-    if (refreshToken) {
-      const clientId = api.cms.settings.get("googleClientId") ?? "",
-        clientSecret = api.cms.settings.get("googleClientSecret") ?? "";
-      if (!clientId || !clientSecret)
-        throw new Error(
-          "Google refresh credentials need both client ID and client secret.",
-        );
+    const clientId = api.cms.settings.get("googleClientId") ?? "",
+      clientSecret = api.cms.settings.get("googleClientSecret") ?? "";
+    // Checked before any network call, so a wrong property costs no quota.
+    const property = api.cms.settings.get("googleProperty") || origin + "/";
+    if (!(
+      property === "sc-domain:" + new URL(origin).hostname ||
+      property === origin + "/"
+    ))
+      throw new Error(
+        "Search Console property must match this website origin or its sc-domain property.",
+      );
+    // An incomplete refresh setup falls back to a working access token.
+    if (refreshToken && (!clientId || !clientSecret) && !token)
+      throw new Error(
+        "Google refresh credentials need both client ID and client secret.",
+      );
+    if (refreshToken && clientId && clientSecret) {
       const result = validate(
         Type.Object({ access_token: Type.String() }),
         await checked(
@@ -244,14 +261,6 @@ export async function visibilityReport(
     if (!token)
       throw new Error(
         "Configure a Google Search Console access token or OAuth refresh credentials in plugin settings.",
-      );
-    const property = api.cms.settings.get("googleProperty") || origin + "/";
-    if (!(
-      property === "sc-domain:" + new URL(origin).hostname ||
-      property === origin + "/"
-    ))
-      throw new Error(
-        "Search Console property must match this website origin or its sc-domain property.",
       );
     const response = await providerFetch(
       "https://www.googleapis.com/webmasters/v3/sites/" +

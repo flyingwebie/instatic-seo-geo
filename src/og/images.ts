@@ -1,5 +1,5 @@
 import { fingerprint, type GeneratedPage } from "../page";
-import { encodePng } from "./png";
+import { PNG_FAST_LEVEL, PNG_LEVEL, encodePng } from "./png";
 import { renderOg } from "./render";
 import type { Bitmap } from "./raster";
 import {
@@ -50,8 +50,17 @@ export async function ogJobs(
   return jobs;
 }
 
-export function renderOgPng(raw: OgTemplate, data: OgData, logo?: Bitmap): Uint8Array {
-  return encodePng(renderOg(resolveTemplate(raw), data, logo));
+/** `fast` trades a larger file for a quicker encode, for hosts that ran out of time. */
+export function renderOgPng(
+  raw: OgTemplate,
+  data: OgData,
+  logo?: Bitmap,
+  fast = false,
+): Uint8Array {
+  return encodePng(
+    renderOg(resolveTemplate(raw), data, logo),
+    fast ? PNG_FAST_LEVEL : PNG_LEVEL,
+  );
 }
 
 export { fromBase64, toBase64 } from "./base64";

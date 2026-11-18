@@ -140,9 +140,11 @@ export function Overview(props: {
             </Button>
             <Text variant="muted">
               {props.progress ||
-                (status?.completedAt
-                  ? `Last generated ${new Date(status.completedAt).toLocaleString()}`
-                  : "Not generated yet")}
+                (status?.lifecycle?.state === "generating"
+                  ? "Generation is in progress"
+                  : status?.completedAt
+                    ? `Last generated ${new Date(status.completedAt).toLocaleString()}`
+                    : "Not generated yet")}
             </Text>
           </Stack>
         </Section>

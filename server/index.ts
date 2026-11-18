@@ -3,8 +3,15 @@ import type {
   ServerPluginModule,
   ServerPluginRouteHandler,
 } from "#instatic-sdk";
-import { parseOptions, siteOrigin, validate } from "../src/config";
-import { PublicationService } from "../src/service";
+import {
+  ConfigurationError,
+  parseOptions,
+  siteOrigin,
+  validate,
+} from "../src/config";
+import { AnalyticsError } from "../src/analyticsConfig";
+import { describeError } from "../src/lifecycle";
+import { ContentLimitError, PublicationService } from "../src/service";
 import {
   ReportRequestSchema,
   submitIndexNow,
@@ -17,13 +24,16 @@ import { LogoUploadSchema } from "../src/og/logo";
 const plugin: ServerPluginModule = {
   activate(api) {
     const service = new PublicationService(api);
+    // The sandbox console prints only an Error's stack, which has no message.
+    const log = (what: string, error: unknown) =>
+      console.error(`[plugin:instatic.seo-geo] ${what}: ${describeError(error)}`);
     const guarded =
       (handler: ServerPluginRouteHandler): ServerPluginRouteHandler =>
       async (context) => {
         try {
           return await handler(context);
         } catch (error) {
-          console.error("[plugin:instatic.seo-geo]", error);
+          log("Request failed", error);
           return {
             __response: true,
             status: 400,
@@ -36,6 +46,14 @@ const plugin: ServerPluginModule = {
                 error instanceof Error
                   ? error.message
                   : "SEO operation failed.",
+              // Stable for scripts and agents; the message is for people.
+              code:
+                error instanceof ConfigurationError ||
+                error instanceof AnalyticsError
+                  ? "invalid-settings"
+                  : error instanceof ContentLimitError
+                    ? "content-limit"
+                    : "operation-failed",
             }),
           };
         }
@@ -116,12 +134,24 @@ const plugin: ServerPluginModule = {
       guarded(async ({ req }) => {
         const input = validate(
           Type.Object(
-            { force: Type.Optional(Type.Boolean()) },
+            {
+              force: Type.Optional(Type.Boolean()),
+              /** Sent by admin pages that understand `busy` and `deferred` results. */
+              client: Type.Optional(Type.Integer()),
+            },
             { additionalProperties: false },
           ),
           await req.json(),
         );
         const result = await service.rebuild(input.force);
+        // A tab opened before an upgrade runs the old loop, which reads a
+        // waiting result as a stalled generation. Give it the error it knows.
+        if ((result.busy || result.deferred) && !input.client)
+          throw new Error(
+            result.busy
+              ? "A generation batch is already running; retry shortly."
+              : "Social images are being created in the background. Reload this page to follow the progress.",
+          );
         if (result.done) await service.recordSnapshot(true);
         return result;
       }),
@@ -184,16 +214,23 @@ const plugin: ServerPluginModule = {
     api.cms.hooks.on("publication.changed", () => service.invalidate());
     api.cms.hooks.on("settings.changed", () => service.invalidate());
     api.cms.hooks.filter("publish.html", async (html, context) => {
-      const enriched = await service.enrich(html, context);
-      let analytics;
+      // The host drops everything this filter did when it throws, so each
+      // part fails on its own: a broken tag must not cost a page its metadata.
+      let enriched = html;
       try {
-        analytics = validateAnalytics(api.cms.settings.get("analytics"));
+        enriched = await service.enrich(html, context);
       } catch (error) {
-        // A broken tag must never break publishing; the admin shows the error.
-        console.error("[plugin:instatic.seo-geo] Analytics tags:", error);
+        log(`Page metadata for ${context.urlPath}`, error);
+      }
+      try {
+        return await injectAnalytics(
+          enriched,
+          validateAnalytics(api.cms.settings.get("analytics")),
+        );
+      } catch (error) {
+        log(`Analytics tags for ${context.urlPath}`, error);
         return enriched;
       }
-      return injectAnalytics(enriched, analytics);
     });
     api.cms.schedule.register({
       id: "publication-sync",
@@ -201,23 +238,30 @@ const plugin: ServerPluginModule = {
       overlap: "skip",
       maxDurationMs: 300000,
       handler: async () => {
-        if (!api.cms.settings.get("siteUrl")) return;
-        try {
-          const deadline = Date.now() + 210000;
-          let result = await service.rebuild();
-          while (!result.done && Date.now() < deadline)
-            result = await service.rebuild();
-          if (result.done) {
-            await service.recordSnapshot();
-            await submitIndexNow(api, service);
-            await service.cleanup();
+        // Each part is independent: the host pauses a schedule whose handler
+        // fails five times, and one broken part must not stop the others.
+        const part = async (what: string, run: () => Promise<unknown>) => {
+          try {
+            await run();
+          } catch (error) {
+            log(`Scheduled ${what}`, error);
           }
-        } catch (error) {
-          console.error(
-            "[plugin:instatic.seo-geo] Scheduled generation:",
-            error,
-          );
-        }
+        };
+        await part("heartbeat", () => service.heartbeat("schedule"));
+        if (!api.cms.settings.get("siteUrl")) return;
+        let done = false;
+        await part("generation", async () => {
+          // Stop well before the next run so the admin page can take a turn.
+          const deadline = Date.now() + 45000;
+          let result = await service.rebuild(false, "schedule");
+          while (!result.done && !result.busy && Date.now() < deadline)
+            result = await service.rebuild(false, "schedule");
+          done = result.done;
+        });
+        if (!done) return;
+        await part("health snapshot", () => service.recordSnapshot());
+        await part("IndexNow submission", () => submitIndexNow(api, service));
+        await part("cleanup", () => service.cleanup());
       },
     });
   },

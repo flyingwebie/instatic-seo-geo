@@ -286,6 +286,8 @@ test("existing stored generated pages remain readable and stale format checkpoin
   const current = host.records.find((record) => record.data.key === "current")!;
   const checkpoint = JSON.parse(String(current.data.value));
   checkpoint.configuration = "old-generation-format";
+  // Checkpoints written before the exports fingerprint existed do not have it.
+  delete checkpoint.exports;
   current.data.value = JSON.stringify(checkpoint);
   expect((await service.status()).generated).toBe(0);
   while (!(await service.rebuild()).done) {
