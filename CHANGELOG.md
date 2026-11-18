@@ -4,6 +4,22 @@ All notable changes to this plugin. Versions follow [Semantic Versioning](https:
 
 This plugin is **unofficial** and independently maintained.
 
+## [1.0.0-beta.2] - 2026-11-18
+
+### Fixed
+
+- Saving analytics tags or changing the social image design no longer takes `/sitemap.xml`, `/llms.txt` and the Markdown exports offline. Those two settings only change published HTML now; the last good exports keep serving while the affected pages are refreshed underneath them. Saving the website address, pages/redirects/languages/crawler options, or `llms.txt` still starts a fresh generation, as it should.
+- A social image that takes too long to render on a busy server no longer stalls the whole generation. The plugin switches to a faster encoding automatically, and if that still isn't enough it leaves the remaining images to the next scheduled run instead of blocking the rest of the site.
+- A broken analytics snippet no longer costs every published page its canonical URL, structured data and Markdown link. Page metadata and analytics tags are now applied independently, so a problem with one never removes the other.
+- A generation batch interrupted by the server no longer leaves the site stuck: an abandoned batch now gives up its lock after 90 seconds instead of blocking every later attempt indefinitely.
+- Server error logs now include a readable message instead of an unlabeled stack trace, making production issues diagnosable from the logs alone.
+
+### Changed
+
+- A status banner above the tabs (and in `/status` as `lifecycle`) always shows the current state in plain language — what's being served right now, what failed and how many times, and exactly what to do next, including when and where to resume a background schedule that Instatic has paused.
+- **Save & generate** now follows a batch that's already running elsewhere (another open tab, or the automatic background run) instead of failing when it can't get the generation lock.
+- A page or social image that keeps failing the same step is skipped after three tries and reported under Checks, rather than blocking every other page from generating.
+
 ## [1.0.0-beta.1] - 2026-10-20
 
 ### Fixed
@@ -42,6 +58,7 @@ First beta. The plugin is feature-complete for the compatible Instatic host buil
 - AIO publication checks for search and snippet access, readable answers, source links, visible authors and accurate dates.
 - Markdown publishing, XML sitemaps, `robots.txt`, optional `llms.txt`, Schema.org structured data, content ZIP export, IndexNow, and Search Console/Bing visibility reports.
 
+[1.0.0-beta.2]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.1
 [1.0.0-beta.0]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.0
 [0.3.0-alpha.0]: https://github.com/flyingwebie/instatic-seo-geo/releases
