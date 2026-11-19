@@ -116,6 +116,8 @@ export function auditAio(input: {
   links: string[];
   authorsVisible: boolean;
   datePublished: string;
+  /** False when the page is known not to be an article: byline, date and sources are then optional. */
+  article?: boolean;
 }): AioReport {
   const { main, head, origin, options, page, indexable, robots, links } = input;
   const googleTokens = readRobots(head, "googlebot");
@@ -203,18 +205,23 @@ export function auditAio(input: {
       : "Visible headings help readers understand the topic; no exact question format is required.",
     "Use a descriptive heading that reflects the question you actually answer. Publish it in the CMS.",
   );
+  const article = input.article !== false;
   add(
     "sources",
     "Supporting sources",
-    sourceCount ? "pass" : "review",
-    `${sourceCount} external content link(s) found. Links are not evidence of source quality.`,
+    sourceCount || !article ? "pass" : "review",
+    article
+      ? `${sourceCount} external content link(s) found. Links are not evidence of source quality.`
+      : `${sourceCount} external content link(s) found. This page is not an article, so sources are optional.`,
     "Add trustworthy sources for factual claims where useful; verify the claims and linked evidence yourself.",
   );
   add(
     "attribution",
     "Attribution and dates",
-    input.authorsVisible && input.datePublished ? "pass" : "review",
-    [
+    !article || (input.authorsVisible && input.datePublished) ? "pass" : "review",
+    !article
+      ? "This page is not an article, so it needs no byline or publication date."
+      : [
       input.authorsVisible
         ? "A configured author name appears in published content."
         : "No visible configured author was verified; some pages do not need a byline.",

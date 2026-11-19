@@ -67,8 +67,8 @@ export type PageContext = {
   language?: string;
 };
 
-/** /blog/page/2, /insights/category/x/page/3: later pages of a listing. */
-const PAGINATED = /\/page\/\d+$/;
+/** /blog/page/2, /insights/category/x/page/3: later pages of a listing. Page 1 is the listing itself. */
+const PAGINATED = /\/page\/(?:[2-9]|[1-9]\d+)$/;
 /** Slugs that usually name the page shown after a form is sent. */
 const CONFIRMATION = /\/(thank-you|thanks|thank_you|confirmation|order-received)$/;
 const DESCRIPTION_MIN = 50;
@@ -823,6 +823,9 @@ export function enrichPage(
               links,
               authorsVisible: visibleAuthors.length > 0,
               datePublished,
+              // Once the owner has named the article collections, a page
+              // outside them is not asked for a byline, a date or sources.
+              article: articleType !== "none" || !options.articleTables,
             }),
           }),
     },

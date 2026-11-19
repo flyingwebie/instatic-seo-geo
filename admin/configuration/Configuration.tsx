@@ -151,7 +151,7 @@ export function Configuration(props: {
             />
             <LinesField
               label="Article collections"
-              description="One table slug per line. Entries of these collections are treated as articles: they get Article structured data and the byline, date and source checks. Blank treats every public collection as articles. List only your blog or news tables so project pages and team profiles are not checked as articles."
+              description="One table slug per line. Entries of these collections are treated as articles: they get Article structured data and the byline, date and source checks. Blank treats every public collection as articles. List only your blog or news tables so project pages, team profiles and ordinary pages are not asked for a byline, a date or sources."
               placeholder={"posts\ninsights"}
               value={value.articleTables}
               disabled={disabled}

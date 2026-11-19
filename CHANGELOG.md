@@ -14,10 +14,10 @@ This plugin is **unofficial** and independently maintained.
 
 ### Added
 
-- **Published files** on the overview and in Setup: links to your live `/sitemap.xml`, `/robots.txt`, `/llms.txt` and Markdown home page, each marked live or not yet.
-- Later pages of a listing, such as `/blog/page/2`, are kept out of search results and the sitemap automatically (`noindex, follow`). Turn indexing on for a page in Setup → Pages to index it anyway.
+- **Published files** on the overview and in Setup: links to your live `/sitemap.xml`, `/robots.txt` and `/llms.txt`, each marked live or not yet.
+- Later pages of a listing, from `/blog/page/2` on, are kept out of search results and the sitemap automatically (`noindex, follow`). Turn indexing on for a page in Setup → Pages to index it anyway.
 - Checks now flags descriptions that are too short to be useful, notes very long ones, and suggests hiding confirmation pages such as `/thank-you` from search.
-- **Article collections** in Setup → Website: name the collections that are really articles, so project pages and team profiles stop being checked for bylines and sources and no longer carry Article structured data.
+- **Article collections** in Setup → Website: name the collections that are really articles, so project pages and team profiles stop being checked for bylines and sources and no longer carry Article structured data. Once it is set, the AI Overviews review also stops asking non-article pages for a byline, a date and sources.
 
 ## [1.0.0-beta.2] - 2026-11-18
 

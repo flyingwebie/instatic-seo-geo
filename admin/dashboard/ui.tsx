@@ -408,8 +408,9 @@ export function BarList({
 }
 
 /**
- * The files the plugin publishes on the public site, as links that open in a
- * new tab, each with whether it answers right now.
+ * The discovery files the plugin publishes on the public site, as links that
+ * open in a new tab, each with whether it answers right now. Markdown copies
+ * are per page and depend on that page being indexable, so they are not listed.
  */
 export function PublishedFiles(props: {
   /** Public website address as saved, or "" when not set. */
@@ -435,7 +436,6 @@ export function PublishedFiles(props: {
       live: props.serving && props.llms,
       off: props.llms ? undefined : "Switched off in Setup → Website",
     },
-    { path: "/markdown/index.md", what: "Markdown copy of the home page", live: props.serving },
   ];
   return (
     <Stack gap={8}>

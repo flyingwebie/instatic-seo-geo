@@ -60,6 +60,11 @@ describe("Pages kept out of search results", () => {
     // A page that is hidden on purpose is not asked for a better description.
     expect(codes(page("<p>Blog</p>", "/insights/page/2"))).not.toContain("description.short");
   });
+  test("page 1 of a listing is the listing itself and stays indexable", () => {
+    expect(page(`<p>${sentence}</p>`, "/insights/page/1").page.indexable).toBe(true);
+    expect(page(`<p>${sentence}</p>`, "/insights/page/10").page.indexable).toBe(false);
+    expect(page(`<p>${sentence}</p>`, "/insights/page/02").page.indexable).toBe(true);
+  });
   test("a path that only contains the word page is not treated as pagination", () => {
     expect(page(`<p>${sentence}</p>`, "/landing-page/2-for-1").page.indexable).toBe(true);
     expect(page(`<p>${sentence}</p>`, "/page/about").page.indexable).toBe(true);
@@ -133,6 +138,24 @@ describe("Which collections are articles", () => {
     expect(project.html).toContain('<meta property="og:type" content="website">');
     // Still a public page: only the article treatment is dropped.
     expect(project.page.indexable).toBe(true);
+  });
+  test("the AI Overviews review asks only articles for a byline, a date and sources once collections are named", () => {
+    const check = (result: ReturnType<typeof page>, id: string) =>
+      result.page.aio?.checks.find((item) => item.id === id);
+    const named = '{"collectionTables":["insights","our-work"],"articleTables":["insights"]}';
+    const service = page(`<h1>Services</h1><p>${sentence}</p>`, "/services", named);
+    expect(service.page.aio?.checks).toHaveLength(5);
+    expect(check(service, "attribution")?.status).toBe("pass");
+    expect(check(service, "attribution")?.detail).toContain("not an article");
+    expect(check(service, "sources")?.status).toBe("pass");
+    expect(check(entry("our-work", named), "attribution")?.status).toBe("pass");
+    // A real article is still asked.
+    expect(check(entry("insights", named), "attribution")?.status).toBe("review");
+    expect(check(entry("insights", named), "sources")?.status).toBe("review");
+    // Nothing changes for a site that has not named its article collections.
+    const unnamed = page(`<h1>Services</h1><p>${sentence}</p>`, "/services");
+    expect(check(unnamed, "attribution")?.status).toBe("review");
+    expect(check(unnamed, "sources")?.status).toBe("review");
   });
   test("one entry can still be made an article by hand", () => {
     const options =

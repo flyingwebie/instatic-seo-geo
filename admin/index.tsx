@@ -92,7 +92,14 @@ export default definePluginAdminApp(function SeoGeo() {
   const [busy, setBusy] = useState(false),
     [progress, setProgress] = useState("");
   const [provider, setProvider] = useState<Provider>("google");
-  const [reportError, setReportError] = useState("");
+  // Kept per provider, so an answer that arrives after switching provider
+  // is never shown under the other one.
+  const [reportErrors, setReportErrors] = useState<Record<Provider, string>>({
+    google: "",
+    bing: "",
+  });
+  const setReportError = (name: Provider, text: string) =>
+    setReportErrors((current) => ({ ...current, [name]: text }));
   const [reports, setReports] = useState<Record<Provider, VisibilityReport | null>>({
     google: null,
     bing: null,
@@ -436,17 +443,14 @@ export default definePluginAdminApp(function SeoGeo() {
         <TabPanel value="performance">
           <Performance
             provider={provider}
-            onProvider={(next) => {
-              setReportError("");
-              setProvider(next);
-            }}
+            onProvider={setProvider}
             report={reports[provider]}
             busy={busy}
-            error={reportError}
+            error={reportErrors[provider]}
             onFetch={async (request) => {
               // A missing connection is something to set up, not a failure:
               // it is explained next to the button instead of in a toast.
-              setReportError("");
+              setReportError(request.provider, "");
               setBusy(true);
               try {
                 const next = await callRoute(routes, "/report", VisibilityReportSchema, {
@@ -455,7 +459,7 @@ export default definePluginAdminApp(function SeoGeo() {
                 });
                 setReports((current) => ({ ...current, [request.provider]: next }));
               } catch (error) {
-                setReportError(message(error));
+                setReportError(request.provider, message(error));
               } finally {
                 setBusy(false);
               }
