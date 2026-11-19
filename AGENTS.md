@@ -43,7 +43,7 @@ lifecycle.nextAction
 | `fix-error` | The same step has failed 3+ times in a row. Read `lifecycle.lastError.message` and fix the reported problem. |
 | `none` | Everything matches; nothing to do. |
 
-A failed admin route answers HTTP 400 with `{ error, code }`. `error` is for people; `code` is stable: `invalid-settings` (fix the saved settings), `content-limit` (a page or the site is too large: change content, do not retry) or `operation-failed` (read `lifecycle.lastError`; usually retried on its own). `POST /generate` with `{"client":2}` returns `busy: true` or `deferred: true` instead of an error while another batch or the schedule is doing the work; poll again.
+A failed admin route answers HTTP 400 with `{ error, code }`. The admin reads it through `callRoute` in `admin/routes.ts`; do not call the host's `routes.json`, which throws "Plugin route failed with 400" and drops the `error` text. `error` is for people; `code` is stable: `invalid-settings` (fix the saved settings), `content-limit` (a page or the site is too large: change content, do not retry) or `operation-failed` (read `lifecycle.lastError`; usually retried on its own). `POST /generate` with `{"client":2}` returns `busy: true` or `deferred: true` instead of an error while another batch or the schedule is doing the work; poll again.
 
 Full state/transition detail, including the two fingerprints and the batch pipeline, is in `docs/state-machines.md` — read it before changing anything in `src/lifecycle.ts` or `PublicationService`.
 

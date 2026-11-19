@@ -34,14 +34,15 @@ After upgrading from a prior plugin generation format, generate again to refresh
 
 ## Advanced configuration reference
 
-Published pages are included automatically. Collection entries default to the public `posts` table; explicitly opt other public tables into `collectionTables`. Templates, layout/component definitions, drafts, preview branches, hidden content, and visitor-specific holes are never content exports. Important content in dynamic fragments produces a diagnostic.
+Published pages are included automatically. Collection entries default to the public `posts` table; explicitly opt other public tables into `collectionTables`. Entries of every public collection are treated as articles (Article structured data, plus the byline, date and source checks) unless `articleTables` names the collections that really are articles; list only your blog or news tables there so project pages and team profiles are not checked as articles. Templates, layout/component definitions, drafts, preview branches, hidden content, and visitor-specific holes are never content exports. Important content in dynamic fragments produces a diagnostic.
 
 The optional advanced JSON editor supports this example (use your real names, URLs, content, and dates):
 
 ```json
 {
   "aioEnabled": true,
-  "collectionTables": ["posts", "guides"],
+  "collectionTables": ["posts", "guides", "projects"],
+  "articleTables": ["posts", "guides"],
   "searchAllowed": true,
   "trainingAllowed": false,
   "userRetrievalAllowed": true,
@@ -97,7 +98,7 @@ The optional advanced JSON editor supports this example (use your real names, UR
 }
 ```
 
-Omit a page field to preserve the corresponding authored HTML metadata. Explicit plugin overrides win; existing title/description/canonical/robots follow; published title and visible-content descriptions supply the fallback. `index` and `follow` accept booleans. Excluded/noindex pages remain crawlable so search crawlers can read their noindex directive; CSS, JavaScript, and uploaded public media remain crawlable. Only self-canonical, indexable, allowed pages enter public Markdown, sitemaps, llms.txt, and ZIP exports. Cross-domain canonicals are retained as authored metadata and excluded from discovery.
+Omit a page field to preserve the corresponding authored HTML metadata. Explicit plugin overrides win; existing title/description/canonical/robots follow; published title and visible-content descriptions supply the fallback. The fallback description is the page's first real paragraph (a short label above the heading is passed over), cut at a sentence or word near 155 characters; Checks flags a description under 50 characters, because a label such as "About" says nothing in a search result. Later pages of a listing (`/blog/page/2`) are `noindex, follow` and left out of the sitemap automatically; set `index: true` for one to index it anyway. A page such as `/thank-you` is not hidden automatically: Checks suggests it, and `"index": false` for that page hides it. `index` and `follow` accept booleans. Excluded/noindex pages remain crawlable so search crawlers can read their noindex directive; CSS, JavaScript, and uploaded public media remain crawlable. Only self-canonical, indexable, allowed pages enter public Markdown, sitemaps, llms.txt, and ZIP exports. Cross-domain canonicals are retained as authored metadata and excluded from discovery.
 
 Dates use actual ISO publication/modification dates. The host provides first/current publication times; unchanged normalized content retains its prior modification date. Do not set dates to the current time merely to suggest freshness. Author schema needs a real configured profile and visible byline. FAQ questions and answers must appear in visible content. Existing valid JSON-LD is reconciled with generated primary entities; authored facts win. Invalid authored JSON-LD stays in the HTML and produces an error finding.
 
