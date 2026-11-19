@@ -407,6 +407,62 @@ export function BarList({
   );
 }
 
+/**
+ * The discovery files the plugin publishes on the public site, as links that
+ * open in a new tab, each with whether it answers right now. Markdown copies
+ * are per page and depend on that page being indexable, so they are not listed.
+ */
+export function PublishedFiles(props: {
+  /** Public website address as saved, or "" when not set. */
+  siteUrl: string;
+  /** The sitemap, llms.txt and Markdown exports are being served. */
+  serving: boolean;
+  llms: boolean;
+}) {
+  const base = props.siteUrl.trim().replace(/\/+$/, "");
+  if (!base)
+    return (
+      <Text variant="muted">
+        Add your public website address in Setup to get the links to your sitemap, robots.txt
+        and llms.txt.
+      </Text>
+    );
+  const files: Array<{ path: string; what: string; live: boolean; off?: string }> = [
+    { path: "/sitemap.xml", what: "Sitemap for search engines", live: props.serving },
+    { path: "/robots.txt", what: "Crawler rules", live: true },
+    {
+      path: "/llms.txt",
+      what: "Content index for AI tools",
+      live: props.serving && props.llms,
+      off: props.llms ? undefined : "Switched off in Setup → Website",
+    },
+  ];
+  return (
+    <Stack gap={8}>
+      {files.map((file) => (
+        <Stack key={file.path} direction="row" gap={8} align="center" wrap>
+          <Badge tone={file.live ? "good" : "neutral"}>
+            {file.live ? "Live" : file.off ? "Off" : "Not yet"}
+          </Badge>
+          {file.off ? (
+            <Text variant="mono">{base + file.path}</Text>
+          ) : (
+            <a
+              href={base + file.path}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`${base + file.path} (opens in a new tab)`}
+            >
+              <Text variant="mono">{base + file.path} ↗</Text>
+            </a>
+          )}
+          <Text variant="muted">{file.off ?? file.what}</Text>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
 /** Small status pill: icon + label, never colour alone. */
 export function Badge({
   tone,

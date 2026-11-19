@@ -13,7 +13,10 @@ export const PageChoicesSchema = Type.Array(
 export const StatusSchema = Type.Object({
   configured: Type.Boolean(),
   stage: Type.String(),
+  /** Every published route, including entries of collections left out of generation. */
   total: Type.Integer(),
+  /** The routes a generation covers: pages plus entries of the selected collections. */
+  included: Type.Optional(Type.Integer()),
   generated: Type.Integer(),
   indexable: Type.Integer(),
   pending: Type.Boolean(),
