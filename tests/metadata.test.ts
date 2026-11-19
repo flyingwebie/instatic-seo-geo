@@ -77,18 +77,23 @@ describe("Pages kept out of search results", () => {
     );
     expect(result.page.indexable).toBe(true);
   });
-  test("a thank-you page that can be indexed gets a tip, and none once indexing is off", () => {
-    expect(codes(page(`<p>${sentence}</p>`, "/thank-you"))).toContain(
-      "indexability.confirmation-page",
-    );
-    const hidden = page(
-      `<p>${sentence}</p>`,
-      "/thank-you",
-      '{"pages":{"/thank-you":{"index":false}}}',
-    );
+  test("a thank-you page is hidden by default and can be indexed again explicitly", () => {
+    const hidden = page(`<p>${sentence}</p>`, "/thank-you");
     expect(hidden.page.indexable).toBe(false);
     expect(hidden.html).toContain('content="noindex,follow');
-    expect(codes(hidden)).not.toContain("indexability.confirmation-page");
+    expect(
+      hidden.page.findings.find((f) => f.code === "indexability.excluded")?.message,
+    ).toContain("after a form is sent");
+    expect(page(`<p>${sentence}</p>`, "/contact/thanks").page.indexable).toBe(false);
+    // Only the exact slug counts, never a page that merely mentions thanks.
+    expect(page(`<p>${sentence}</p>`, "/thanksgiving-offers").page.indexable).toBe(true);
+    expect(page(`<p>${sentence}</p>`, "/thank-you/guide").page.indexable).toBe(true);
+    const shown = page(
+      `<p>${sentence}</p>`,
+      "/thank-you",
+      '{"pages":{"/thank-you":{"index":true}}}',
+    );
+    expect(shown.page.indexable).toBe(true);
   });
   test("paginated and hidden pages are left out of the sitemap, llms.txt and Markdown", async () => {
     const host = fakeHost([
@@ -97,7 +102,6 @@ describe("Pages kept out of search results", () => {
       document("/thank-you", `<main><h1>Thanks</h1><p>${sentence}</p></main>`),
     ]);
     host.values.llmsEnabled = true;
-    host.values.options = '{"pages":{"/thank-you":{"index":false}}}';
     await complete(host.service);
     const sitemap = String((await host.service.publicFile("/sitemap.xml")).body);
     expect(sitemap).toContain("https://example.com/insights</loc>");

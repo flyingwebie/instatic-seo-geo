@@ -69,8 +69,8 @@ export type PageContext = {
 
 /** /blog/page/2, /insights/category/x/page/3: later pages of a listing. Page 1 is the listing itself. */
 const PAGINATED = /\/page\/(?:[2-9]|[1-9]\d+)$/;
-/** Slugs that usually name the page shown after a form is sent. */
-const CONFIRMATION = /\/(thank-you|thanks|thank_you|confirmation|order-received)$/;
+/** Slugs that name the page shown after a form is sent. Kept narrow: these are hidden by default. */
+const CONFIRMATION = /\/(thank-you|thankyou|thank_you|thanks)$/;
 const DESCRIPTION_MIN = 50;
 const DESCRIPTION_MAX = 160;
 
@@ -181,10 +181,15 @@ export function enrichPage(
   // Page 2 and later of a listing repeat page 1 with other items. They stay
   // crawlable so their links are followed, but out of search results unless
   // the page is explicitly set to be indexed.
+  // The same goes for the page shown after a form is sent: nobody should land
+  // on "thank you" from a search result.
   const paginated = PAGINATED.test(context.path);
+  const confirmation = CONFIRMATION.test(context.path);
+  const hiddenByDefault =
+    (paginated || confirmation) && authored.index === undefined;
   const index =
     authored.index ??
-    (paginated
+    (paginated || confirmation
       ? false
       : !robots.some((token) => token === "noindex" || token === "none"));
   const follow =
@@ -729,19 +734,14 @@ export function enrichPage(
     finding(
       "indexability.excluded",
       "info",
-      paginated && authored.index === undefined
-        ? "Later pages of a listing are kept out of search results and the sitemap automatically; their links are still followed."
+      hiddenByDefault
+        ? paginated
+          ? "Later pages of a listing are kept out of search results and the sitemap automatically; their links are still followed."
+          : "A page shown after a form is sent is kept out of search results and the sitemap automatically."
         : "Page is excluded from canonical public exports.",
-      paginated && authored.index === undefined
+      hiddenByDefault
         ? "Nothing to do. To index this page anyway, turn indexing on for it in Setup → Pages."
         : "Review robots controls, canonical URL, and excluded paths if exclusion is unintended.",
-    );
-  else if (CONFIRMATION.test(context.path))
-    finding(
-      "indexability.confirmation-page",
-      "info",
-      "This looks like a page visitors only reach after sending a form, and it can appear in search results.",
-      "Turn indexing off for this page in Setup → Pages so it stays out of search results and the sitemap.",
     );
   if (elements(parsed.main, "instatic-hole").length)
     finding(
