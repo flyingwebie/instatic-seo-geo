@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Type } from "@sinclair/typebox";
 import { usePluginRoutes } from "@instatic/host-hooks";
+import { callRoute } from "../routes";
 import { Alert, Button, Checkbox, SearchBar, Stack, Text, pushToast } from "@instatic/host-ui";
 import { encodeLogo, prepareLogo } from "../../src/og/logo";
 import type { Bitmap } from "../../src/og/raster";
@@ -97,7 +98,7 @@ export function LogoPicker(props: {
     setWorking(true);
     try {
       const bitmap = await rasterize(src, removeWhite);
-      const saved = await routes.json("/og-logo", SavedLogoSchema, {
+      const saved = await callRoute(routes, "/og-logo", SavedLogoSchema, {
         method: "POST",
         body: JSON.stringify({ name, width: bitmap.width, height: bitmap.height, data: encodeLogo(bitmap) }),
       });

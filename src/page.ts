@@ -21,6 +21,7 @@ import {
   remove,
   safeUrl,
   serializePage,
+  type HtmlElement,
 } from "./html";
 
 const JsonObjectSchema = Type.Record(Type.String(), Type.Unknown());
@@ -65,6 +66,35 @@ export type PageContext = {
   firstPublishedAt?: string;
   language?: string;
 };
+
+/** /blog/page/2, /insights/category/x/page/3: later pages of a listing. */
+const PAGINATED = /\/page\/\d+$/;
+/** Slugs that usually name the page shown after a form is sent. */
+const CONFIRMATION = /\/(thank-you|thanks|thank_you|confirmation|order-received)$/;
+const DESCRIPTION_MIN = 50;
+const DESCRIPTION_MAX = 160;
+
+/**
+ * The description used when a page has none of its own: its first real
+ * paragraph. Many pages open with a short label above the heading ("About",
+ * "Services · Cork"), which says nothing in a search result, so paragraphs
+ * that are too short to be a sentence are passed over when a longer one exists.
+ */
+function leadText(main: HtmlElement): string {
+  const paragraphs = contentElements(main, "p")
+    .map(compactText)
+    .filter(Boolean);
+  const lead =
+    paragraphs.find((text) => text.length >= 60) ??
+    paragraphs[0] ??
+    compactText(main);
+  if (lead.length <= 155) return lead;
+  // Cut at the last sentence that fits, else at a word, never mid-word.
+  const head = lead.slice(0, 155);
+  const sentence = Math.max(head.lastIndexOf(". "), head.lastIndexOf("? "), head.lastIndexOf("! "));
+  if (sentence >= 80) return head.slice(0, sentence + 1);
+  return head.slice(0, head.lastIndexOf(" ")).replace(/[\s,;:–—-]+$/, "") + "…";
+}
 
 function optionsFor(options: SiteOptions, path: string): PageOptions {
   return options.pages?.[path] ?? {};
@@ -136,10 +166,7 @@ export function enrichPage(
   const description =
     authored.description ??
     meta(parsed.head, "description") ??
-    compactText(contentElements(parsed.main, "p")[0] ?? parsed.main).slice(
-      0,
-      160,
-    );
+    leadText(parsed.main);
   const originalCanonical = elements(parsed.head, "link").find((node) =>
     attribute(node, "rel")?.split(/\s+/).includes("canonical"),
   );
@@ -151,9 +178,15 @@ export function enrichPage(
       ownUrl,
     ) ?? ownUrl;
   const robots = readRobots(parsed.head);
+  // Page 2 and later of a listing repeat page 1 with other items. They stay
+  // crawlable so their links are followed, but out of search results unless
+  // the page is explicitly set to be indexed.
+  const paginated = PAGINATED.test(context.path);
   const index =
     authored.index ??
-    !robots.some((token) => token === "noindex" || token === "none");
+    (paginated
+      ? false
+      : !robots.some((token) => token === "noindex" || token === "none"));
   const follow =
     authored.follow ??
     !robots.some((token) => token === "nofollow" || token === "none");
@@ -390,7 +423,12 @@ export function enrichPage(
   for (const profile of [...visibleAuthors, ...(publisher ? [publisher] : [])])
     add(profileNode(profile));
   const articleType =
-    authored.articleType ?? (context.kind === "entry" ? "Article" : "none");
+    authored.articleType ??
+    (context.kind === "entry" &&
+    (!options.articleTables ||
+      options.articleTables.includes(context.tableSlug ?? ""))
+      ? "Article"
+      : "none");
   if (articleType !== "none") {
     add({
       "@type": articleType,
@@ -673,12 +711,37 @@ export function enrichPage(
       "Page description is empty.",
       "Author an accurate page description.",
     );
+  else if (indexable && description.trim().length < DESCRIPTION_MIN)
+    finding(
+      "description.short",
+      "warning",
+      `Description is only ${description.trim().length} characters: “${description.trim()}”.`,
+      "Write one or two sentences that say what the page offers (about 120–155 characters) in Setup → Pages. Search results and AI answers quote this text.",
+    );
+  else if (indexable && description.length > DESCRIPTION_MAX)
+    finding(
+      "description.long",
+      "info",
+      `Description is ${description.length} characters; search results usually cut it near 155.`,
+      "Put the most important words first, or shorten it in Setup → Pages.",
+    );
   if (!indexable)
     finding(
       "indexability.excluded",
       "info",
-      "Page is excluded from canonical public exports.",
-      "Review robots controls, canonical URL, and excluded paths if exclusion is unintended.",
+      paginated && authored.index === undefined
+        ? "Later pages of a listing are kept out of search results and the sitemap automatically; their links are still followed."
+        : "Page is excluded from canonical public exports.",
+      paginated && authored.index === undefined
+        ? "Nothing to do. To index this page anyway, turn indexing on for it in Setup → Pages."
+        : "Review robots controls, canonical URL, and excluded paths if exclusion is unintended.",
+    );
+  else if (CONFIRMATION.test(context.path))
+    finding(
+      "indexability.confirmation-page",
+      "info",
+      "This looks like a page visitors only reach after sending a form, and it can appear in search results.",
+      "Turn indexing off for this page in Setup → Pages so it stays out of search results and the sitemap.",
     );
   if (elements(parsed.main, "instatic-hole").length)
     finding(

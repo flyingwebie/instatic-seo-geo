@@ -61,6 +61,8 @@ export function Performance(props: {
   onProvider: (provider: Provider) => void;
   report: VisibilityReport | null;
   busy: boolean;
+  /** Why the last fetch did not return a report, in words for the site owner. */
+  error: string;
   onFetch: (request: { provider: Provider; startDate: string; endDate: string }) => void;
   onIndexNow: () => void;
 }) {
@@ -163,6 +165,11 @@ export function Performance(props: {
         </Stack>
       </Section>
 
+      {props.error && (
+        <Alert tone="warning" title="The report could not be fetched">
+          {props.error}
+        </Alert>
+      )}
       {!report ? (
         <Alert tone="info" title="No report yet">
           Choose a provider and period, then fetch the report. The latest report is saved so

@@ -6,6 +6,7 @@ import { totals } from "../../src/integrations";
 import {
   Badge,
   Grid,
+  PublishedFiles,
   Section,
   Tile,
   TrendChart,
@@ -31,6 +32,9 @@ export function Overview(props: {
   analyticsProviders: string[];
   analyticsActive: boolean;
   socialImagesOn: boolean;
+  /** Public website address as saved. */
+  siteUrl: string;
+  llms: boolean;
   busy: boolean;
   progress: string;
   onNavigate: (tab: TabId) => void;
@@ -51,9 +55,20 @@ export function Overview(props: {
     ? totals(report.daily?.length ? report.daily : report.rows)
     : undefined;
   const generated = (status?.generated ?? 0) > 0;
-  const steps: Array<{ done: boolean; label: string; tab: TabId; action: string }> = [
+  const generating = status?.lifecycle?.state === "generating";
+  // Entries of collections that are not selected in Setup are published but
+  // not part of a generation; say so instead of showing an unreachable total.
+  const included = status?.included ?? status?.total ?? 0;
+  const leftOut = Math.max(0, (status?.total ?? 0) - included);
+  const steps: Array<{
+    done: boolean;
+    label: string;
+    tab: TabId;
+    action: string;
+    working?: boolean;
+  }> = [
     { done: props.siteConfigured, label: "Add your public website address", tab: "setup", action: "Open setup" },
-    { done: generated, label: "Generate sitemap, metadata and checks", tab: "setup", action: "Open setup" },
+    { done: generated, working: generating, label: "Generate sitemap, metadata and checks", tab: "setup", action: "Open setup" },
     { done: generated && errors === 0, label: "Fix pages that need action", tab: "checks", action: "View checks" },
     { done: props.socialImagesOn, label: "Design your social sharing image", tab: "social", action: "Design" },
     { done: props.analyticsActive, label: "Connect an analytics tool", tab: "analytics", action: "Add tags" },
@@ -71,7 +86,11 @@ export function Overview(props: {
         <Tile
           label="Pages generated"
           value={formatNumber(status?.generated ?? 0)}
-          sub={`of ${formatNumber(status?.total ?? 0)} published routes`}
+          sub={
+            leftOut
+              ? `of ${formatNumber(included)} · ${formatNumber(leftOut)} more in collections not selected in Setup`
+              : `of ${formatNumber(included)} published routes`
+          }
         />
         <Tile
           label="Indexable pages"
@@ -119,10 +138,12 @@ export function Overview(props: {
             {steps.map((step) => (
               <Stack key={step.label} direction="row" justify="between" align="center" gap={8} wrap>
                 <Stack direction="row" gap={8} align="center">
-                  <Badge tone={step.done ? "good" : "neutral"}>{step.done ? "Done" : "To do"}</Badge>
+                  <Badge tone={step.done ? "good" : step.working ? "warning" : "neutral"}>
+                    {step.done ? "Done" : step.working ? "In progress" : "To do"}
+                  </Badge>
                   <Text>{step.label}</Text>
                 </Stack>
-                {!step.done && (
+                {!step.done && !step.working && (
                   <Button variant="ghost" size="sm" onClick={() => props.onNavigate(step.tab)}>
                     {step.action}
                   </Button>
@@ -202,6 +223,17 @@ export function Overview(props: {
           )}
         </Section>
       </Grid>
+
+      <Section
+        title="Published files"
+        description="What search engines and AI tools read from your site. Each link opens the live file."
+      >
+        <PublishedFiles
+          siteUrl={props.siteUrl}
+          serving={status?.lifecycle?.serving === "exports"}
+          llms={props.llms}
+        />
+      </Section>
 
       <Grid min={340}>
         <Section

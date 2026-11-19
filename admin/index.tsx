@@ -39,8 +39,9 @@ import { AnalyticsTags } from "./dashboard/AnalyticsTags";
 import { Checks } from "./dashboard/Checks";
 import { SocialImages } from "./dashboard/SocialImages";
 import { parseOgTemplate, resolveTemplate, type OgTemplate } from "../src/og/template";
-import { Section } from "./dashboard/ui";
+import { PublishedFiles, Section } from "./dashboard/ui";
 import { LifecycleNotice } from "./dashboard/Lifecycle";
+import { callRoute } from "./routes";
 
 const CachedReportSchema = Type.Object({
   report: Type.Union([VisibilityReportSchema, Type.Null()]),
@@ -91,6 +92,7 @@ export default definePluginAdminApp(function SeoGeo() {
   const [busy, setBusy] = useState(false),
     [progress, setProgress] = useState("");
   const [provider, setProvider] = useState<Provider>("google");
+  const [reportError, setReportError] = useState("");
   const [reports, setReports] = useState<Record<Provider, VisibilityReport | null>>({
     google: null,
     bing: null,
@@ -149,8 +151,8 @@ export default definePluginAdminApp(function SeoGeo() {
     pushToast({ kind: "error", title: "SEO & GEO operation failed", body: message(error) });
   const refresh = async () => {
     const [nextStatus, nextHistory] = await Promise.all([
-      routes.json("/status", StatusSchema),
-      routes.json("/history", HistorySchema),
+      callRoute(routes, "/status", StatusSchema),
+      callRoute(routes, "/history", HistorySchema),
     ]);
     setStatus(nextStatus);
     setHistory(nextHistory);
@@ -158,9 +160,9 @@ export default definePluginAdminApp(function SeoGeo() {
   useEffect(() => {
     let active = true;
     Promise.all([
-      routes.json("/status", StatusSchema),
-      routes.json("/pages", PageChoicesSchema),
-      routes.json("/history", HistorySchema),
+      callRoute(routes, "/status", StatusSchema),
+      callRoute(routes, "/pages", PageChoicesSchema),
+      callRoute(routes, "/history", HistorySchema),
     ])
       .then(([value, pages, points]) => {
         if (!active) return;
@@ -236,7 +238,7 @@ export default definePluginAdminApp(function SeoGeo() {
     if (ogError) throw new Error(ogError);
     const analyticsJson = JSON.stringify(analytics);
     const ogJson = JSON.stringify(ogTemplate);
-    await routes.json("/configure", Type.Object({ ok: Type.Boolean() }), {
+    await callRoute(routes, "/configure", Type.Object({ ok: Type.Boolean() }), {
       method: "POST",
       body: JSON.stringify({
         siteUrl: siteUrlValue,
@@ -262,7 +264,7 @@ export default definePluginAdminApp(function SeoGeo() {
       const batch = async () => {
         for (let failures = 1; ; failures++)
           try {
-            return await routes.json("/generate", ProgressSchema, {
+            return await callRoute(routes, "/generate", ProgressSchema, {
               method: "POST",
               // Tells the server this page understands waiting results.
               body: '{"client":2}',
@@ -423,6 +425,8 @@ export default definePluginAdminApp(function SeoGeo() {
             analyticsProviders={detectProviders(JSON.parse(savedAnalytics) as AnalyticsOptions)}
             analyticsActive={analyticsActive(JSON.parse(savedAnalytics) as AnalyticsOptions)}
             socialImagesOn={resolveTemplate(JSON.parse(savedOg) as OgTemplate).enabled}
+            siteUrl={String(settings.siteUrl ?? "")}
+            llms={settings.llmsEnabled === true}
             busy={busy || !canGenerate}
             progress={progress || (busy ? "" : saveHint)}
             onNavigate={setTab}
@@ -432,21 +436,33 @@ export default definePluginAdminApp(function SeoGeo() {
         <TabPanel value="performance">
           <Performance
             provider={provider}
-            onProvider={setProvider}
+            onProvider={(next) => {
+              setReportError("");
+              setProvider(next);
+            }}
             report={reports[provider]}
             busy={busy}
-            onFetch={(request) =>
-              perform(async () => {
-                const next = await routes.json("/report", VisibilityReportSchema, {
+            error={reportError}
+            onFetch={async (request) => {
+              // A missing connection is something to set up, not a failure:
+              // it is explained next to the button instead of in a toast.
+              setReportError("");
+              setBusy(true);
+              try {
+                const next = await callRoute(routes, "/report", VisibilityReportSchema, {
                   method: "POST",
                   body: JSON.stringify(request),
                 });
                 setReports((current) => ({ ...current, [request.provider]: next }));
-              })
-            }
+              } catch (error) {
+                setReportError(message(error));
+              } finally {
+                setBusy(false);
+              }
+            }}
             onIndexNow={() =>
               perform(async () => {
-                const result = await routes.json("/indexnow", IndexNowResultSchema, {
+                const result = await callRoute(routes, "/indexnow", IndexNowResultSchema, {
                   method: "POST",
                   body: "{}",
                 });
@@ -498,9 +514,11 @@ export default definePluginAdminApp(function SeoGeo() {
             </Card>
             <Section title="Save and publish">
               {actions}
-              <Text variant="mono">
-                /sitemap.xml · /robots.txt · /markdown/&lt;route&gt;/index.md
-              </Text>
+              <PublishedFiles
+                siteUrl={String(settings.siteUrl ?? "")}
+                serving={status?.lifecycle?.serving === "exports"}
+                llms={settings.llmsEnabled === true}
+              />
             </Section>
           </Stack>
         </TabPanel>
