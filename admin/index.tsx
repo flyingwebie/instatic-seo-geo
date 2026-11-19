@@ -71,6 +71,10 @@ export default definePluginAdminApp(function SeoGeo() {
   const [siteUrl, setSiteUrl] = useState(String(settings.siteUrl ?? ""));
   const [options, setOptions] = useState(String(settings.options ?? "{}"));
   const [llms, setLlms] = useState(settings.llmsEnabled === true);
+  // What the server has, as opposed to what the form shows: links to the
+  // live files must follow the saved address, not an unsaved edit.
+  const [savedSiteUrl, setSavedSiteUrl] = useState(String(settings.siteUrl ?? ""));
+  const [savedLlms, setSavedLlms] = useState(settings.llmsEnabled === true);
   const [initial] = useState(() => initialAnalytics(settings.analytics));
   const [analytics, setAnalytics] = useState<AnalyticsOptions>(initial.value);
   const [savedAnalytics, setSavedAnalytics] = useState(JSON.stringify(initial.value));
@@ -257,6 +261,8 @@ export default definePluginAdminApp(function SeoGeo() {
     });
     setSavedAnalytics(analyticsJson);
     setSavedOg(ogJson);
+    setSavedSiteUrl(siteUrlValue);
+    setSavedLlms(llms);
   };
   const generate = () => {
     setGenerating(true);
@@ -266,6 +272,7 @@ export default definePluginAdminApp(function SeoGeo() {
       let previousCheckpoint = "";
       let stalled = 0;
       let waited = 0;
+      let statusAt = Date.now();
       // The server retries a failing step and skips a page or image after
       // three tries, so one failed batch is not the end of the run.
       const batch = async () => {
@@ -318,6 +325,12 @@ export default definePluginAdminApp(function SeoGeo() {
             );
         }
         previousCheckpoint = checkpoint;
+        // Keep the banner and the checklist in step with a long run, not
+        // only the progress line this loop writes.
+        if (Date.now() - statusAt > 8000) {
+          statusAt = Date.now();
+          refresh().catch(() => {});
+        }
         setProgress(
           result.phase === "html"
             ? `Refreshing public pages: ${result.refreshed ?? 0} of ${result.total}.`
@@ -432,8 +445,8 @@ export default definePluginAdminApp(function SeoGeo() {
             analyticsProviders={detectProviders(JSON.parse(savedAnalytics) as AnalyticsOptions)}
             analyticsActive={analyticsActive(JSON.parse(savedAnalytics) as AnalyticsOptions)}
             socialImagesOn={resolveTemplate(JSON.parse(savedOg) as OgTemplate).enabled}
-            siteUrl={String(settings.siteUrl ?? "")}
-            llms={settings.llmsEnabled === true}
+            siteUrl={savedSiteUrl}
+            llms={savedLlms}
             busy={busy || !canGenerate}
             progress={progress || (busy ? "" : saveHint)}
             onNavigate={setTab}
@@ -519,9 +532,9 @@ export default definePluginAdminApp(function SeoGeo() {
             <Section title="Save and publish">
               {actions}
               <PublishedFiles
-                siteUrl={String(settings.siteUrl ?? "")}
+                siteUrl={savedSiteUrl}
                 serving={status?.lifecycle?.serving === "exports"}
-                llms={settings.llmsEnabled === true}
+                llms={savedLlms}
               />
             </Section>
           </Stack>

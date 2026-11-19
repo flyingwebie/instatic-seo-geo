@@ -56,6 +56,18 @@ export function Configuration(props: {
   const [value, setValue] = useState<SiteOptions>(initial.value);
   const [blocked, setBlocked] = useState(!!initial.error);
   const [section, setSection] = useState<Section>("Website");
+  // The slugs this site really has, shown beside the free-text fields so a
+  // typo such as "post" for "posts" is easy to spot.
+  const tables = [
+    ...new Set(
+      props.pages
+        .filter((page) => page.kind === "entry" && page.tableSlug)
+        .map((page) => page.tableSlug),
+    ),
+  ].sort();
+  const knownTables = tables.length
+    ? ` Collections with published entries on this site: ${tables.join(", ")}.`
+    : "";
   const [selected, setSelected] = useState("");
   const [newPath, setNewPath] = useState("");
   const [advanced, setAdvanced] = useState(!!initial.error);
@@ -137,7 +149,7 @@ export function Configuration(props: {
             />
             <LinesField
               label="Public collection tables"
-              description="One table slug per line. Blank uses posts. Enable only tables whose entries should appear in public discovery exports; drafts remain excluded."
+              description={`One table slug per line. Blank uses posts. Enable only tables whose entries should appear in public discovery exports; drafts remain excluded.${knownTables}`}
               placeholder={"posts\nguides"}
               value={value.collectionTables}
               disabled={disabled}
@@ -151,7 +163,7 @@ export function Configuration(props: {
             />
             <LinesField
               label="Article collections"
-              description="One table slug per line. Entries of these collections are treated as articles: they get Article structured data and the byline, date and source checks. Blank treats every public collection as articles. List only your blog or news tables so project pages, team profiles and ordinary pages are not asked for a byline, a date or sources."
+              description={`One table slug per line. Entries of these collections are treated as articles: they get Article structured data and the byline, date and source checks. Blank treats every public collection as articles. List only your blog or news tables so project pages, team profiles and ordinary pages are not asked for a byline, a date or sources.${knownTables}`}
               placeholder={"posts\ninsights"}
               value={value.articleTables}
               disabled={disabled}

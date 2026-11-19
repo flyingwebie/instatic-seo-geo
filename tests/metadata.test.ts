@@ -36,6 +36,18 @@ describe("Description used when a page has none of its own", () => {
     expect(second.page.description.endsWith("…")).toBe(true);
     expect(second.page.description).not.toMatch(/automatio…$/);
   });
+  test("a cookie notice, sign-up box or footer inside the page is never used as the description", () => {
+    const notice =
+      "We use cookies to improve your experience and keep this site running smoothly for everyone.";
+    const result = page(
+      `<aside><p>${notice}</p></aside><p>Call us today.</p><h1>Contact</h1><footer><p>${notice}</p></footer>`,
+    );
+    expect(result.page.description).toBe("Call us today.");
+  });
+  test("one unbroken run of characters is cut to length without pretending to end on a word", () => {
+    const result = page(`<p>${"x".repeat(300)}</p>`);
+    expect(result.page.description).toBe("x".repeat(155));
+  });
   test("an authored description always wins and a very long one is only a tip", () => {
     const long = "A".repeat(170);
     const result = page(

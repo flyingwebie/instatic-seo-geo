@@ -447,8 +447,13 @@ export function PublishedFiles(props: {
           {file.off ? (
             <Text variant="mono">{base + file.path}</Text>
           ) : (
-            <a href={base + file.path} target="_blank" rel="noreferrer">
-              <Text variant="mono">{base + file.path}</Text>
+            <a
+              href={base + file.path}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`${base + file.path} (opens in a new tab)`}
+            >
+              <Text variant="mono">{base + file.path} ↗</Text>
             </a>
           )}
           <Text variant="muted">{file.off ?? file.what}</Text>

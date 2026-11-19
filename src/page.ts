@@ -21,6 +21,7 @@ import {
   remove,
   safeUrl,
   serializePage,
+  isElement,
   type HtmlElement,
 } from "./html";
 
@@ -81,7 +82,23 @@ const DESCRIPTION_MAX = 160;
  * that are too short to be a sentence are passed over when a longer one exists.
  */
 function leadText(main: HtmlElement): string {
+  // A cookie notice, sign-up box or footer inside <main> is long enough to
+  // look like a lead paragraph, so text in those containers is never chosen.
+  const boilerplate = (node: HtmlElement) => {
+    for (
+      let parent = node.parentNode;
+      parent && parent !== main;
+      parent = "parentNode" in parent ? parent.parentNode : null
+    )
+      if (
+        isElement(parent) &&
+        ["footer", "aside", "nav", "form", "dialog"].includes(parent.tagName)
+      )
+        return true;
+    return false;
+  };
   const paragraphs = contentElements(main, "p")
+    .filter((node) => !boilerplate(node))
     .map(compactText)
     .filter(Boolean);
   const lead =
@@ -93,7 +110,10 @@ function leadText(main: HtmlElement): string {
   const head = lead.slice(0, 155);
   const sentence = Math.max(head.lastIndexOf(". "), head.lastIndexOf("? "), head.lastIndexOf("! "));
   if (sentence >= 80) return head.slice(0, sentence + 1);
-  return head.slice(0, head.lastIndexOf(" ")).replace(/[\s,;:–—-]+$/, "") + "…";
+  const word = head.lastIndexOf(" ");
+  // One unbroken run of characters has no clean place to cut.
+  if (word < 1) return head;
+  return head.slice(0, word).replace(/[\s,;:–—-]+$/, "") + "…";
 }
 
 function optionsFor(options: SiteOptions, path: string): PageOptions {

@@ -18,7 +18,12 @@ This plugin is **unofficial** and independently maintained.
 - Later pages of a listing, from `/blog/page/2` on, are kept out of search results and the sitemap automatically (`noindex, follow`). Turn indexing on for a page in Setup → Pages to index it anyway.
 - The page shown after a form is sent (`/thank-you`, `/thanks`) is kept out of search results and the sitemap automatically, in the same way.
 - Checks now flags descriptions that are too short to be useful and notes very long ones.
+- Setup lists the collections that have published entries next to the collection fields, so a mistyped table name is easy to spot.
 - **Article collections** in Setup → Website: name the collections that are really articles, so project pages and team profiles stop being checked for bylines and sources and no longer carry Article structured data. Once it is set, the AI Overviews review also stops asking non-article pages for a byline, a date and sources.
+
+### Upgrade note
+
+- Settings saved with **Article collections** filled in are not readable by 1.0.0-beta.2 or earlier. Clear that field before installing an older version.
 
 ## [1.0.0-beta.2] - 2026-11-18
 
