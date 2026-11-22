@@ -160,6 +160,18 @@ const StoredLogoSchema = Type.Object({
   data: Type.String(),
 });
 
+/** The routes a generation covers: every page, and entries of the selected collections. */
+function includedRoutes(
+  routes: readonly PublishedRoute[],
+  options: SiteOptions,
+): PublishedRoute[] {
+  return routes.filter(
+    (route) =>
+      route.kind === "page" ||
+      (options.collectionTables ?? ["posts"]).includes(route.tableSlug),
+  );
+}
+
 /** A page or site is too large to process: the owner has to change content, not retry. */
 export class ContentLimitError extends Error {
   constructor(message: string) {
@@ -522,6 +534,7 @@ export class PublicationService {
         configured: false,
         stage: "configuration",
         total: 0,
+        included: 0,
         generated: 0,
         indexable: 0,
         pending: false,
@@ -559,6 +572,7 @@ export class PublicationService {
           ? "ready"
           : "configuration",
       total: state.inventory.totalCount,
+      included: includedRoutes(state.inventory.routes, state.options).length,
       generated: state.pages.length,
       indexable: state.pages.filter((page) => page.indexable).length,
       pending: !!pending,
@@ -722,11 +736,7 @@ export class PublicationService {
     const entered = Date.now();
     const { config, configuration, exports } = await this.fingerprints();
     const inventory = await this.inventory();
-    const allowedRoutes = inventory.routes.filter(
-      (route) =>
-        route.kind === "page" ||
-        (config.options.collectionTables ?? ["posts"]).includes(route.tableSlug),
-    );
+    const allowedRoutes = includedRoutes(inventory.routes, config.options);
     const current = await this.state("current", GenerationSchema);
     const stored = await this.state("pending", PendingSchema);
     if (

@@ -158,6 +158,11 @@ export const SiteOptionsSchema = Type.Object(
     ),
     excludedPaths: Type.Optional(Type.Array(Type.String())),
     collectionTables: Type.Optional(Type.Array(Type.String())),
+    /**
+     * Collections whose entries are articles (byline, dates, Article schema).
+     * Absent means every public collection, as before this option existed.
+     */
+    articleTables: Type.Optional(Type.Array(Type.String())),
     searchAllowed: Type.Optional(Type.Boolean()),
     trainingAllowed: Type.Optional(Type.Boolean()),
     userRetrievalAllowed: Type.Optional(Type.Boolean()),

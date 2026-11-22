@@ -97,7 +97,7 @@ async function providerFetch(
 async function checked(response: Response, provider: string) {
   if (!response.ok)
     throw new Error(
-      `${provider} request failed (HTTP ${response.status}). Check the credentials, property access, quota, and date range in plugin settings.`,
+      `${provider} request failed (HTTP ${response.status}). Check the credentials, property access, quota and date range under Plugins → SEO, GEO & AIO → Settings.`,
     );
   const text = await response.text();
   if (text.length > 2 * 1024 * 1024)
@@ -260,7 +260,7 @@ export async function visibilityReport(
     }
     if (!token)
       throw new Error(
-        "Configure a Google Search Console access token or OAuth refresh credentials in plugin settings.",
+        "Search Console is not connected yet. Open Plugins → SEO, GEO & AIO → Settings and add a Google access token, or a refresh token with its client ID and secret, then fetch again.",
       );
     const response = await providerFetch(
       "https://www.googleapis.com/webmasters/v3/sites/" +
@@ -357,7 +357,9 @@ export async function visibilityReport(
   } else {
     const key = api.cms.settings.get("bingApiKey") ?? "";
     if (!key)
-      throw new Error("Configure a Bing Webmaster API key in plugin settings.");
+      throw new Error(
+        "Bing Webmaster is not connected yet. Open Plugins → SEO, GEO & AIO → Settings, add your Bing Webmaster API key, then fetch again.",
+      );
     const url = new URL(
       "https://ssl.bing.com/webmaster/api.svc/json/GetQueryStats",
     );

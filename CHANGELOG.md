@@ -4,6 +4,27 @@ All notable changes to this plugin. Versions follow [Semantic Versioning](https:
 
 This plugin is **unofficial** and independently maintained.
 
+## [1.0.0-beta.3] - 2026-11-19
+
+### Fixed
+
+- Errors on the plugin page now say what went wrong. Every failure used to read "Plugin route failed with 400"; a missing Search Console or Bing connection now explains where to add it, next to the Fetch button instead of in an error toast.
+- Pages without their own description no longer get a label such as "About" or "Contact" as their search description. The first real paragraph is used instead, cut cleanly near 155 characters. Regenerating refreshes these descriptions, so affected pages show a new modified date once.
+- The overview counts pages against the routes a generation actually covers, and says how many published entries sit in collections that are not selected in Setup, instead of showing a total that could never be reached.
+
+### Added
+
+- **Published files** on the overview and in Setup: links to your live `/sitemap.xml`, `/robots.txt` and `/llms.txt`, each marked live or not yet.
+- Later pages of a listing, from `/blog/page/2` on, are kept out of search results and the sitemap automatically (`noindex, follow`). Turn indexing on for a page in Setup → Pages to index it anyway.
+- The page shown after a form is sent (`/thank-you`, `/thanks`) is kept out of search results and the sitemap automatically, in the same way.
+- Checks now flags descriptions that are too short to be useful and notes very long ones.
+- Setup lists the collections that have published entries next to the collection fields, so a mistyped table name is easy to spot.
+- **Article collections** in Setup → Website: name the collections that are really articles, so project pages and team profiles stop being checked for bylines and sources and no longer carry Article structured data. Once it is set, the AI Overviews review also stops asking non-article pages for a byline, a date and sources.
+
+### Upgrade note
+
+- Settings saved with **Article collections** filled in are not readable by 1.0.0-beta.2 or earlier. Clear that field before installing an older version.
+
 ## [1.0.0-beta.2] - 2026-11-18
 
 ### Fixed
@@ -58,6 +79,7 @@ First beta. The plugin is feature-complete for the compatible Instatic host buil
 - AIO publication checks for search and snippet access, readable answers, source links, visible authors and accurate dates.
 - Markdown publishing, XML sitemaps, `robots.txt`, optional `llms.txt`, Schema.org structured data, content ZIP export, IndexNow, and Search Console/Bing visibility reports.
 
+[1.0.0-beta.3]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.3
 [1.0.0-beta.2]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.1
 [1.0.0-beta.0]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.0
