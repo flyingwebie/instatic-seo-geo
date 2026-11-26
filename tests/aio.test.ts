@@ -289,7 +289,8 @@ test("existing stored generated pages remain readable and stale format checkpoin
   // Checkpoints written before the exports fingerprint existed do not have it.
   delete checkpoint.exports;
   current.data.value = JSON.stringify(checkpoint);
-  expect((await service.status()).generated).toBe(0);
+  // The older generation keeps being served until the new one commits.
+  expect((await service.status()).generated).toBe(1);
   while (!(await service.rebuild()).done) {
     /* refresh with current semantics */
   }
