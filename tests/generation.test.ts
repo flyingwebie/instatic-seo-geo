@@ -73,6 +73,23 @@ describe("Generation lifecycle and current eligibility", () => {
     }
     expect((await host.service.publicFile("/about-us//")).status).toBe(404);
   });
+  test("redirects keep working when their target is republished, until it is removed", async () => {
+    const host = fakeHost([document("/about", undefined, { id: "about" })]);
+    host.values.options = JSON.stringify({
+      redirects: [{ from: "/about-us", to: "/about", status: 301 }],
+    });
+    await complete(host.service);
+    host.setDocuments([
+      document("/about", "<main>Edited</main>", { id: "about", revision: "r2" }),
+    ]);
+    const response = await host.service.publicFile("/about-us/");
+    expect(response.status).toBe(301);
+    expect(response.headers).toHaveProperty("Location", "https://example.com/about");
+    // Stale Markdown is still withheld until the next generation.
+    expect((await host.service.publicFile("/markdown/about/index.md")).status).toBe(404);
+    host.setDocuments([]);
+    expect((await host.service.publicFile("/about-us")).status).toBe(404);
+  });
   test("configuration and changed-route revisions cannot serve stale exports", async () => {
     const host = fakeHost([document("/a")]);
     await complete(host.service);

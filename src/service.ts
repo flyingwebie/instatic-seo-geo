@@ -460,17 +460,23 @@ export class PublicationService {
     const inventory = await this.inventory();
     const generation = await this.state("current", GenerationSchema);
     const servable = !!generation && this.servable(generation, live);
-    const pages =
-      generation && servable
-        ? (await this.pages(generation.id)).filter((page) =>
-            inventory.routes.some(
-              (route) =>
-                route.id === page.id &&
-                route.path === page.path &&
-                route.revision === page.revision,
-            ),
-          )
-        : [];
+    const generated = generation && servable ? await this.pages(generation.id) : [];
+    const pages = generated.filter((page) =>
+      inventory.routes.some(
+        (route) =>
+          route.id === page.id &&
+          route.path === page.path &&
+          route.revision === page.revision,
+      ),
+    );
+    // Pages still published at the same address, even if edited since the
+    // generation. Stale exports are withheld, but a redirect only needs its
+    // target to exist, so republishing a page must not switch redirects off.
+    const routable = generated.filter((page) =>
+      inventory.routes.some(
+        (route) => route.id === page.id && route.path === page.path,
+      ),
+    );
     await this.api.cms.publication.list({
       limit: 1,
       revision: inventory.revision,
@@ -484,6 +490,7 @@ export class PublicationService {
       inventory,
       generation,
       pages,
+      routable,
       /** The generation's exports are valid for the settings saved now. */
       servable,
       /** The generation matches the published content and every setting. */
@@ -1394,7 +1401,7 @@ export class PublicationService {
     const redirect = redirectsFor(
       state.options,
       [],
-      state.pages,
+      state.routable,
       state.generation.redirects,
     ).find((redirect) => redirect.from === source);
     if (redirect)
