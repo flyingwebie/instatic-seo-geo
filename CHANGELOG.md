@@ -4,6 +4,12 @@ All notable changes to this plugin. Versions follow [Semantic Versioning](https:
 
 This plugin is **unofficial** and independently maintained.
 
+## [1.0.0-beta.5] - 2026-11-26
+
+### Fixed
+
+- Redirects no longer stop when their destination page is edited and published again. Until the next generation ran, every redirect to a republished page returned the 404 page, because the destination no longer matched the generated revision. A redirect now only needs its destination to still be published at the same address. Markdown, the sitemap and `llms.txt` still wait for the next generation, as before.
+
 ## [1.0.0-beta.4] - 2026-11-26
 
 ### Fixed
@@ -85,6 +91,7 @@ First beta. The plugin is feature-complete for the compatible Instatic host buil
 - AIO publication checks for search and snippet access, readable answers, source links, visible authors and accurate dates.
 - Markdown publishing, XML sitemaps, `robots.txt`, optional `llms.txt`, Schema.org structured data, content ZIP export, IndexNow, and Search Console/Bing visibility reports.
 
+[1.0.0-beta.5]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.5
 [1.0.0-beta.4]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.4
 [1.0.0-beta.3]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.3
 [1.0.0-beta.2]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.2
