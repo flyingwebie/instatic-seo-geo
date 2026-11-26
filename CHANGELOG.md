@@ -4,6 +4,12 @@ All notable changes to this plugin. Versions follow [Semantic Versioning](https:
 
 This plugin is **unofficial** and independently maintained.
 
+## [1.0.0-beta.6] - 2026-11-26
+
+### Fixed
+
+- Checks no longer lists every redirect as "Redirect target is missing or excluded" after the site is published again. The redirects kept working (1.0.0-beta.5), but Checks still used the stricter rule for exports and showed one error per redirect until the next generation. Checks now uses the same rule as the live redirects: the destination must still be published at the same address.
+
 ## [1.0.0-beta.5] - 2026-11-26
 
 ### Fixed
@@ -91,6 +97,7 @@ First beta. The plugin is feature-complete for the compatible Instatic host buil
 - AIO publication checks for search and snippet access, readable answers, source links, visible authors and accurate dates.
 - Markdown publishing, XML sitemaps, `robots.txt`, optional `llms.txt`, Schema.org structured data, content ZIP export, IndexNow, and Search Console/Bing visibility reports.
 
+[1.0.0-beta.6]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.6
 [1.0.0-beta.5]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.5
 [1.0.0-beta.4]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.4
 [1.0.0-beta.3]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.3

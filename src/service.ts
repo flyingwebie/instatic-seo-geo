@@ -559,7 +559,13 @@ export class PublicationService {
     const state = await this.current();
     const pending = await this.state("pending", PendingSchema);
     const lifecycle = await this.lifecycle(state, pending);
-    const audit = auditSite(state.pages, state.origin, state.options);
+    const audit = auditSite(
+      state.pages,
+      state.origin,
+      state.options,
+      Date.now(),
+      state.routable,
+    );
     // Pages a run had to leave out are findings, so they show up in Checks.
     audit.findings.unshift(...lifecycle.skipped.map(skippedFinding));
     const sections = this.sections(state.inventory.routes);

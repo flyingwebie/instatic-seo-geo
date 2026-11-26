@@ -7,6 +7,8 @@ export function auditSite(
   origin: string,
   options: SiteOptions,
   now = Date.now(),
+  /** Pages a redirect may point to; served redirects only need the address. */
+  redirectTargets: readonly GeneratedPage[] = pages,
 ): { findings: Finding[]; suggestions: LinkSuggestion[] } {
   const findings = pages.flatMap((page) => page.findings);
   const suggestions: LinkSuggestion[] = [];
@@ -58,7 +60,9 @@ export function auditSite(
         "error",
       );
     if (
-      !eligible.some((page) => page.path === redirect.to) &&
+      !redirectTargets.some(
+        (page) => page.indexable && page.path === redirect.to,
+      ) &&
       !(options.redirects ?? []).some((item) => item.from === redirect.to)
     )
       add(
