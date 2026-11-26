@@ -90,6 +90,21 @@ describe("Generation lifecycle and current eligibility", () => {
     host.setDocuments([]);
     expect((await host.service.publicFile("/about-us")).status).toBe(404);
   });
+  test("Checks do not report redirects as broken while their target is republished", async () => {
+    const host = fakeHost([document("/about", undefined, { id: "about" })]);
+    host.values.options = JSON.stringify({
+      redirects: [{ from: "/about-us", to: "/about", status: 301 }],
+    });
+    await complete(host.service);
+    host.setDocuments([
+      document("/about", "<main>Edited</main>", { id: "about", revision: "r2" }),
+    ]);
+    const codes = (await host.service.status()).findings.map((f) => f.code);
+    expect(codes).not.toContain("redirect.target-ineligible");
+    host.setDocuments([]);
+    const after = (await host.service.status()).findings.map((f) => f.code);
+    expect(after).toContain("redirect.target-ineligible");
+  });
   test("configuration and changed-route revisions cannot serve stale exports", async () => {
     const host = fakeHost([document("/a")]);
     await complete(host.service);
