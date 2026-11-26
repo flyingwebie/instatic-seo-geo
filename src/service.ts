@@ -109,6 +109,13 @@ const PendingSchema = Type.Object({
   fastImages: Type.Optional(Type.Boolean()),
   /** Even the fast way ran out of time in a request; leave images to the scheduled job. */
   slowImages: Type.Optional(Type.Boolean()),
+  /**
+   * Paths rendered again in this run. Unchanged pages are copied from the
+   * last generation, and only these get their published HTML refreshed.
+   */
+  changed: Type.Optional(Type.Array(Type.String())),
+  /** Settings or origin changed since the last generation: refresh every page. */
+  full: Type.Optional(Type.Boolean()),
 });
 type Pending = Static<typeof PendingSchema>;
 
@@ -460,23 +467,19 @@ export class PublicationService {
     const inventory = await this.inventory();
     const generation = await this.state("current", GenerationSchema);
     const servable = !!generation && this.servable(generation, live);
-    const generated = generation && servable ? await this.pages(generation.id) : [];
+    // The last committed generation keeps answering until the next one
+    // commits, so a publish or a settings change never empties the sitemap,
+    // llms.txt, Markdown or redirects. Only pages still published at the same
+    // address are served: a deleted or moved page drops out at once, while an
+    // edited page keeps its previous export for the few minutes until the
+    // next generation replaces it.
+    const generated = generation ? await this.pages(generation.id) : [];
     const pages = generated.filter((page) =>
-      inventory.routes.some(
-        (route) =>
-          route.id === page.id &&
-          route.path === page.path &&
-          route.revision === page.revision,
-      ),
-    );
-    // Pages still published at the same address, even if edited since the
-    // generation. Stale exports are withheld, but a redirect only needs its
-    // target to exist, so republishing a page must not switch redirects off.
-    const routable = generated.filter((page) =>
       inventory.routes.some(
         (route) => route.id === page.id && route.path === page.path,
       ),
     );
+    const routable = pages;
     await this.api.cms.publication.list({
       limit: 1,
       revision: inventory.revision,
@@ -777,10 +780,15 @@ export class PublicationService {
         origin: config.origin,
         offset: 0,
         total: allowedRoutes.length,
-        siteName: "",
+        siteName: current?.siteName ?? "",
         htmlOffset: 0,
         bytes: 0,
         imageOffset: 0,
+        changed: [],
+        full:
+          !current ||
+          current.configuration !== configuration ||
+          current.origin !== config.origin,
       };
       await this.save("pending", pending);
     } else pending = stored;
@@ -808,8 +816,32 @@ export class PublicationService {
         await this.save("pending", pending);
       } else {
         const earlier = await previous();
-        for (const route of allowedRoutes.slice(pending.offset, pending.offset + 3)) {
+        let rendered = 0;
+        while (pending.offset < allowedRoutes.length && rendered < 3) {
+          const route = allowedRoutes[pending.offset]!;
           this.held(lease);
+          // A page published unchanged since the last generation, under the
+          // same settings, is copied instead of rendered again.
+          // Runs started before this option existed have no flag: full run.
+          const unchanged = pending.full !== false
+            ? undefined
+            : earlier.find(
+                (page) =>
+                  page.id === route.id &&
+                  page.path === route.path &&
+                  page.revision === route.revision &&
+                  page.configuration === configuration,
+              );
+          if (unchanged) {
+            await this.storeDocument(pending, route.path, JSON.stringify(unchanged));
+            pending.offset++;
+            this.advance(pending, "documents:" + pending.offset);
+            // Copies are cheap; stay inside the request's time budget anyway.
+            if (Date.now() - entered > IMAGE_BUDGET_MS) break;
+            continue;
+          }
+          rendered++;
+          pending.changed = [...new Set([...(pending.changed ?? []), route.path])];
           const raw = await this.api.cms.publication.render({
             path: route.path,
             origin: config.origin,
@@ -832,41 +864,14 @@ export class PublicationService {
             inventory.routes,
             earlier.find((page) => page.id === route.id),
           );
-          const content = JSON.stringify(page);
-          const collection = this.collection("documents");
-          const existing = (
-            await this.records("documents", {
-              generation: pending.id,
-              path: route.path,
-            })
-          )[0];
-          pending.bytes +=
-            new TextEncoder().encode(content).length -
-            (existing
-              ? new TextEncoder().encode(String(existing.data.content ?? "")).length
-              : 0);
-          if (pending.bytes > 24 * 1024 * 1024)
-            throw new ContentLimitError(
-              "Generation exceeds the 24 MiB document budget. Restrict the published collection allowlist.",
-            );
-          if (existing)
-            await collection.update(existing.id, {
-              generation: pending.id,
-              path: route.path,
-              content,
-            });
-          else
-            await collection.create({
-              generation: pending.id,
-              path: route.path,
-              content,
-            });
+          await this.storeDocument(pending, route.path, JSON.stringify(page));
           pending.offset++;
           pending.siteName = document.siteName;
           this.advance(pending, "documents:" + pending.offset);
           this.held(lease);
           await this.save("pending", pending);
         }
+        await this.save("pending", pending);
       }
       if (pending.offset < allowedRoutes.length) return progress("documents");
     }
@@ -971,11 +976,18 @@ export class PublicationService {
 
     // 3. HTML: re-render only existing published versions, in small batches,
     // before exposing the new export pointer. Drafts never enter this pipeline.
-    if (pending.htmlOffset < allowedRoutes.length) {
+    // After a publish with unchanged settings, only the pages rendered again
+    // need their HTML refreshed: the host already ran this plugin's filter
+    // on them when they were published, but before their new export existed.
+    const refreshable =
+      pending.full === false
+        ? allowedRoutes.filter((route) => pending.changed?.includes(route.path))
+        : allowedRoutes;
+    if (pending.htmlOffset < refreshable.length) {
       // A batch that failed is retried one page at a time.
       const size =
         (await this.attempt(pending, "html:" + pending.htmlOffset)) > 1 ? 1 : 3;
-      const refresh = allowedRoutes
+      const refresh = refreshable
         .slice(pending.htmlOffset, pending.htmlOffset + size)
         .map((route) => route.path);
       this.held(lease);
@@ -988,10 +1000,10 @@ export class PublicationService {
       pending.htmlOffset += refresh.length;
       this.advance(
         pending,
-        pending.htmlOffset < allowedRoutes.length ? "html:" + pending.htmlOffset : "commit",
+        pending.htmlOffset < refreshable.length ? "html:" + pending.htmlOffset : "commit",
       );
       await this.save("pending", pending);
-      if (pending.htmlOffset < allowedRoutes.length) return progress("html");
+      if (pending.htmlOffset < refreshable.length) return progress("html");
     }
 
     // 4. Commit: validate, then move the current pointer to the new generation.
@@ -1086,6 +1098,25 @@ export class PublicationService {
       await this.clear("pending");
     });
     return { done: true, offset: pages.length, total: pages.length };
+  }
+  /** Write one page's export record for a run, keeping the size budget. */
+  private async storeDocument(pending: Pending, path: string, content: string) {
+    const collection = this.collection("documents");
+    const existing = (
+      await this.records("documents", { generation: pending.id, path })
+    )[0];
+    pending.bytes +=
+      new TextEncoder().encode(content).length -
+      (existing
+        ? new TextEncoder().encode(String(existing.data.content ?? "")).length
+        : 0);
+    if (pending.bytes > 24 * 1024 * 1024)
+      throw new ContentLimitError(
+        "Generation exceeds the 24 MiB document budget. Restrict the published collection allowlist.",
+      );
+    if (existing)
+      await collection.update(existing.id, { generation: pending.id, path, content });
+    else await collection.create({ generation: pending.id, path, content });
   }
   async cleanup(): Promise<void> {
     const current = await this.state("current", GenerationSchema),
@@ -1391,7 +1422,7 @@ export class PublicationService {
         return notFound;
     }
     const state = await this.current();
-    if (!state.generation || !state.servable)
+    if (!state.generation)
       return {
         __response: true,
         status: 503,
@@ -1399,8 +1430,7 @@ export class PublicationService {
           ...headers,
           "Content-Type": "text/plain; charset=utf-8",
           "Retry-After": "60",
-          // Lets a person or agent tell the two causes apart from outside.
-          "X-Seo-Geo-Reason": state.generation ? "settings-changed" : "not-generated",
+          "X-Seo-Geo-Reason": "not-generated",
         },
         body: "SEO generation is pending. Run Generate in the plugin admin page.",
       };
@@ -1457,8 +1487,8 @@ export class PublicationService {
   }
   async download() {
     const state = await this.current();
-    if (!state.generation || !state.servable)
-      throw new Error("Generate current content before downloading.");
+    if (!state.generation)
+      throw new Error("Generate content before downloading.");
     return {
       __response: true,
       status: 200,

@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Instatic-UNOFFICIAL-64748b" alt="Unofficial Instatic plugin" />
-  <img src="https://img.shields.io/badge/version-1.0.0--beta.6-0ea5e9" alt="Version 1.0.0-beta.6" />
+  <img src="https://img.shields.io/badge/version-1.0.0--beta.7-0ea5e9" alt="Version 1.0.0-beta.7" />
   <img src="https://img.shields.io/badge/status-BETA-8b5cf6" alt="Status: beta" />
   <img src="https://img.shields.io/badge/Bun-1.4.x-14151a" alt="Bun 1.4.x" />
   <img src="https://img.shields.io/badge/TypeScript-strict-3178c6" alt="Strict TypeScript" />
@@ -100,9 +100,9 @@ The banner above the tabs (also answered at `/status` as `lifecycle`) always say
 | **Update waiting**    | Published content or a setting changed since the last run. Click **Save & generate**, or wait for the next automatic run (every minute). |
 | **Up to date**        | Nothing to do.                                                                                       |
 
-**Saving analytics tags or a social image design never breaks the sitemap.** Those two settings only change published HTML; `/sitemap.xml`, `/llms.txt` and the Markdown exports keep answering with the last good generation while the affected pages are refreshed underneath them. Saving the website address, the page/redirect/language/crawler options, or turning `llms.txt` on or off does invalidate the exports immediately, because those settings decide what the exports contain.
+**The sitemap never goes blank.** Publishing a page or saving any setting keeps `/sitemap.xml`, `/llms.txt`, the Markdown exports and redirects answering with the last finished generation until the next one commits. Only pages still published at the same address are served, so a deleted or moved page drops out at once; an edited page keeps its previous export for the few minutes until it is regenerated. A publish regenerates only the pages that changed; saving settings or changing the website address regenerates every page.
 
-**A 503 on `/sitemap.xml`, `/llms.txt` or `/markdown/*`** means there is no servable generation right now — either nothing has ever completed, or a setting that affects the exports just changed. It carries `Retry-After: 60` and an `X-Seo-Geo-Reason` header (`not-generated` or `settings-changed`) so a script or an on-call person can tell the two apart without opening the admin page. It clears itself as soon as the next generation reaches its commit step; `/robots.txt` is unaffected either way, since it only depends on settings.
+**A 503 on `/sitemap.xml`, `/llms.txt` or `/markdown/*`** means the site has never been generated. It carries `Retry-After: 60` and `X-Seo-Geo-Reason: not-generated`, and clears itself when the first generation commits. `/robots.txt` never waits for a generation, since it only depends on settings.
 
 **"Pages skipped" in Checks** means one or more pages (or their social image) failed the same step three times in a row during the last run. A skipped page is left out of the sitemap and exports until it's fixed and generated again; a skipped image just means that page keeps its own existing `og:image` instead of the generated one. Everything else in the run still completes.
 

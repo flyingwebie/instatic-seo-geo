@@ -85,8 +85,8 @@ describe("Generation lifecycle and current eligibility", () => {
     const response = await host.service.publicFile("/about-us/");
     expect(response.status).toBe(301);
     expect(response.headers).toHaveProperty("Location", "https://example.com/about");
-    // Stale Markdown is still withheld until the next generation.
-    expect((await host.service.publicFile("/markdown/about/index.md")).status).toBe(404);
+    // The page's previous Markdown keeps answering until the next generation.
+    expect((await host.service.publicFile("/markdown/about/index.md")).status).toBe(200);
     host.setDocuments([]);
     expect((await host.service.publicFile("/about-us")).status).toBe(404);
   });
@@ -105,25 +105,53 @@ describe("Generation lifecycle and current eligibility", () => {
     const after = (await host.service.status()).findings.map((f) => f.code);
     expect(after).toContain("redirect.target-ineligible");
   });
-  test("configuration and changed-route revisions cannot serve stale exports", async () => {
+  test("a publish regenerates only the pages that changed; a settings change regenerates all", async () => {
+    const docs = Array.from({ length: 6 }, (_, i) =>
+      document("/" + i, undefined, { id: "p" + i }),
+    );
+    const host = fakeHost(docs);
+    await complete(host.service);
+    const rendered: string[] = [];
+    const render = host.api.cms.publication.render;
+    host.api.cms.publication.render = (options) => {
+      rendered.push(options.path);
+      return render(options);
+    };
+    host.refreshes.length = 0;
+    const edited = document("/2", "<main>Edited</main>", { id: "p2", revision: "r2" });
+    host.setDocuments(docs.map((doc, i) => (i === 2 ? edited : doc)));
+    await complete(host.service);
+    expect(rendered).toEqual(["/2"]);
+    expect(host.refreshes.flat()).toEqual(["/2"]);
+    expect((await host.service.status()).generated).toBe(6);
+    expect(String((await host.service.publicFile("/markdown/2/index.md")).body)).toContain("Edited");
+
+    rendered.length = 0;
+    host.refreshes.length = 0;
+    host.values.options = '{"pages":{"/0":{"title":"Zero"}}}';
+    await complete(host.service);
+    expect(rendered).toHaveLength(6);
+    expect(host.refreshes.flat()).toHaveLength(6);
+  });
+  test("exports never go blank: settings changes and edits keep the last version until the next commit", async () => {
     const host = fakeHost([document("/a")]);
     await complete(host.service);
     host.values.options = '{"pages":{"/a":{"index":false}}}';
-    expect((await host.service.publicFile("/markdown/a/index.md")).status).toBe(
-      503,
-    );
+    expect((await host.service.publicFile("/markdown/a/index.md")).status).toBe(200);
     await complete(host.service);
-    expect((await host.service.publicFile("/markdown/a/index.md")).status).toBe(
-      404,
-    );
+    expect((await host.service.publicFile("/markdown/a/index.md")).status).toBe(404);
     host.values.options = "{}";
     await complete(host.service);
     host.setDocuments([
       document("/a", "<main>Changed</main>", { revision: "r2" }),
     ]);
-    expect((await host.service.publicFile("/markdown/a/index.md")).status).toBe(
-      404,
-    );
+    // Edited but not yet regenerated: the previous export still answers.
+    expect((await host.service.publicFile("/markdown/a/index.md")).status).toBe(200);
+    expect(String((await host.service.publicFile("/sitemap.xml")).body)).toContain("/a");
+    // Removed: it drops out at once, without waiting for a generation.
+    host.setDocuments([]);
+    expect((await host.service.publicFile("/markdown/a/index.md")).status).toBe(404);
+    expect(String((await host.service.publicFile("/sitemap.xml")).body)).not.toContain("/a<");
   });
   test("publication races restart staging; refresh failures never commit", async () => {
     const host = fakeHost(

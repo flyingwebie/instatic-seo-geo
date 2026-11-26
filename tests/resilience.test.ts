@@ -297,7 +297,7 @@ describe("the generation lease", () => {
 });
 
 describe("exports keep serving across settings that only change published HTML", () => {
-  test("analytics and social-image design changes keep exports servable; export-affecting changes 503 until regenerated", () =>
+  test("settings changes keep the last exports served until the next generation commits; only a site never generated answers 503", () =>
     silenced(async () => {
       const host = fakeHost([document("/a")]);
       await complete(host.service);
@@ -318,10 +318,15 @@ describe("exports keep serving across settings that only change published HTML",
 
       host.values.ogTemplate = "{}";
       host.values.options = '{"pages":{"/a":{"index":false}}}';
-      const blocked = (await host.service.publicFile("/sitemap.xml")) as FileResponse;
-      expect(blocked.status).toBe(503);
-      expect(blocked.headers["X-Seo-Geo-Reason"]).toBe("settings-changed");
-      expect(blocked.headers["Content-Type"]).toBe("text/plain; charset=utf-8");
+      // The sitemap never goes blank: the last generation answers until the
+      // new one commits, then the page drops out.
+      const stale = (await host.service.publicFile("/sitemap.xml")) as FileResponse;
+      expect(stale.status).toBe(200);
+      expect(String(stale.body)).toContain("/a");
+      await complete(host.service);
+      const fresh = (await host.service.publicFile("/sitemap.xml")) as FileResponse;
+      expect(fresh.status).toBe(200);
+      expect(String(fresh.body)).not.toContain("example.com/a");
 
       const freshHost = fakeHost([document("/b")]);
       const noGeneration = (await freshHost.service.publicFile("/sitemap.xml")) as FileResponse;
@@ -349,13 +354,13 @@ describe("legacy generations stored without an exports fingerprint", () => {
       expect((await host.service.publicFile("/sitemap.xml")).status).toBe(200);
     }));
 
-  test("503 once any setting changes, until the site is regenerated", () =>
+  test("keep serving after a setting changes, until the site is regenerated", () =>
     silenced(async () => {
       const host = fakeHost([document("/a")]);
       await complete(host.service);
       stripExportsField(host);
       host.values.options = '{"pages":{"/a":{"index":false}}}';
-      expect((await host.service.publicFile("/sitemap.xml")).status).toBe(503);
+      expect((await host.service.publicFile("/sitemap.xml")).status).toBe(200);
       await complete(host.service);
       expect((await host.service.publicFile("/sitemap.xml")).status).toBe(200);
     }));
