@@ -57,6 +57,22 @@ describe("Generation lifecycle and current eligibility", () => {
     host.setDocuments([]);
     expect((await host.service.publicFile("/old")).status).toBe(404);
   });
+  test("configured redirects also answer the trailing-slash form of the old path", async () => {
+    const host = fakeHost([document("/about")]);
+    host.values.options = JSON.stringify({
+      redirects: [{ from: "/about-us/", to: "/about", status: 301 }],
+    });
+    await complete(host.service);
+    for (const path of ["/about-us", "/about-us/"]) {
+      const response = await host.service.publicFile(path);
+      expect(response.status).toBe(301);
+      expect(response.headers).toHaveProperty(
+        "Location",
+        "https://example.com/about",
+      );
+    }
+    expect((await host.service.publicFile("/about-us//")).status).toBe(404);
+  });
   test("configuration and changed-route revisions cannot serve stale exports", async () => {
     const host = fakeHost([document("/a")]);
     await complete(host.service);

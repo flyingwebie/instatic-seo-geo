@@ -1360,14 +1360,20 @@ export class PublicationService {
       (path === "/llms.txt" && config.llms) ||
       /^\/sitemaps\/\d+\.xml$/.test(path) ||
       path.startsWith("/markdown/");
+    // Saved redirect sources are stored without a trailing slash, but the old
+    // site's URLs (and the copies search engines hold) usually end in one.
+    const source =
+      path.length > 1 && path.endsWith("/") && !path.endsWith("//")
+        ? path.slice(0, -1)
+        : path;
     if (!managed) {
       // Every unknown URL on the site reaches this route, so a miss is
       // answered from the small generation record without loading documents.
       // Read fresh: a new redirect must work at once on every server instance.
       const generation = await this.state("current", GenerationSchema);
       if (
-        !generation?.redirects.some((redirect) => redirect.from === path) &&
-        !config.options.redirects?.some((redirect) => redirect.from === path)
+        !generation?.redirects.some((redirect) => redirect.from === source) &&
+        !config.options.redirects?.some((redirect) => redirect.from === source)
       )
         return notFound;
     }
@@ -1390,7 +1396,7 @@ export class PublicationService {
       [],
       state.pages,
       state.generation.redirects,
-    ).find((redirect) => redirect.from === path);
+    ).find((redirect) => redirect.from === source);
     if (redirect)
       return {
         __response: true,

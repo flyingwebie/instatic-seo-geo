@@ -4,6 +4,12 @@ All notable changes to this plugin. Versions follow [Semantic Versioning](https:
 
 This plugin is **unofficial** and independently maintained.
 
+## [1.0.0-beta.4] - 2026-11-26
+
+### Fixed
+
+- Redirects now also answer the old address with a trailing slash. A redirect saved for `/about-us` used to work only for `/about-us`, while `/about-us/` (the form most old sites used and search engines still hold) fell through to the 404 page.
+
 ## [1.0.0-beta.3] - 2026-11-19
 
 ### Fixed
@@ -79,6 +85,7 @@ First beta. The plugin is feature-complete for the compatible Instatic host buil
 - AIO publication checks for search and snippet access, readable answers, source links, visible authors and accurate dates.
 - Markdown publishing, XML sitemaps, `robots.txt`, optional `llms.txt`, Schema.org structured data, content ZIP export, IndexNow, and Search Console/Bing visibility reports.
 
+[1.0.0-beta.4]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.4
 [1.0.0-beta.3]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.3
 [1.0.0-beta.2]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.2
 [1.0.0-beta.1]: https://github.com/flyingwebie/instatic-seo-geo/releases/tag/v1.0.0-beta.1
