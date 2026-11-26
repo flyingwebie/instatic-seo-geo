@@ -121,6 +121,8 @@ Entity names, business/event locations, and offered prices must be visible on th
 
 ## IndexNow and webmaster reports
 
+Step-by-step instructions for every key and token are in [Getting the integration keys](integrations.md).
+
 Configure integrations in the host's plugin **Settings** panel. They remain optional.
 
 - **IndexNow:** enable submission and set an 8–128-character ownership key containing letters, digits, or hyphens. The plugin serves `/<key>.txt`. Completed generations queue added/changed/removed canonical URLs. A one-minute job submits batches of at most 10,000, retains rejected changes, and honors retry delays. The admin button retries explicitly. HTTP 200/202 means receipt/validation, not indexing.

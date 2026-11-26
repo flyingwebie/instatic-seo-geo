@@ -164,7 +164,7 @@ No JSON is needed for everyday setup. **Show advanced configuration JSON** provi
 
 The ZIP contains the plugin manifest and bundled code. Bun, Git, and the SDK checkout are development tools used to build the package from source. Keep the ZIP intact when uploading it.
 
-**These packages are unofficial beta builds.** The installable plugin ZIP is separate from the generated content ZIP. See the [configuration guide](docs/configuration.md) for page metadata, real author/publisher profiles, FAQs, redirects, translations, crawler policies, and integrations.
+**These packages are unofficial beta builds.** The installable plugin ZIP is separate from the generated content ZIP. See the [configuration guide](docs/configuration.md) for page metadata, real author/publisher profiles, FAQs, redirects, translations, crawler policies, and integrations. To get the IndexNow, Search Console and Bing keys, follow [Getting the integration keys](docs/integrations.md).
 
 ### Check the installation
 
@@ -371,6 +371,7 @@ seo-geo/
 ├── docs/
 │   ├── images/               # README screenshots and generated sample images
 │   ├── configuration.md      # Setup, typed options, integrations, processing budgets
+│   ├── integrations.md       # How to get the IndexNow, Google and Bing keys
 │   ├── state-machines.md     # Generation lifecycle, the batch pipeline, serving rules
 │   ├── roadmap.md            # Completed delivery checklist and acceptance evidence
 │   └── research.md           # Dated primary-source search guidance
