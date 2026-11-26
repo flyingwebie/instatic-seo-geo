@@ -12,6 +12,7 @@ This plugin is **unofficial** and independently maintained.
 
 ### Changed
 
+- **Checks no longer lists pages you hid on purpose.** The page after a form is sent, later pages of a listing, and pages set to "do not index" in Setup → Pages used to appear as "excluded" notes. Only exclusions that may be mistakes are reported now: a robots tag in the page, a canonical pointing elsewhere, or an excluded path.
 - **A publish only regenerates the pages that changed.** Pages published unchanged since the last generation, under the same settings, are copied instead of read and rendered again, and only the changed pages get their published HTML refreshed. On a 63-page site, publishing one page now means one render and one refresh instead of 63 of each. Saving settings or changing the website address still regenerates every page.
 
 ## [1.0.0-beta.6] - 2026-11-26

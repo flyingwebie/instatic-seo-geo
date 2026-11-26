@@ -62,13 +62,31 @@ describe("Description used when a page has none of its own", () => {
 });
 
 describe("Pages kept out of search results", () => {
+  test("a page hidden on purpose in Setup is not a finding; one hidden by its own markup is", () => {
+    const chosen = page(
+      `<p>${sentence}</p>`,
+      "/legal",
+      '{"pages":{"/legal":{"index":false}}}',
+    );
+    expect(chosen.page.indexable).toBe(false);
+    expect(codes(chosen)).not.toContain("indexability.excluded");
+    const authored = enrichPage(
+      `<!doctype html><html lang="en"><head><title>Legal</title><meta name="robots" content="noindex"></head><body><main><p>${sentence}</p></main></body></html>`,
+      { path: "/legal", kind: "page" },
+      origin,
+      "Example",
+      parseOptions("{}"),
+    );
+    expect(authored.page.indexable).toBe(false);
+    expect(codes(authored)).toContain("indexability.excluded");
+  });
   test("page 2 of a listing is noindex,follow by default and says why", () => {
     const result = page(`<h1>Blog</h1><p>${sentence}</p>`, "/insights/page/2");
     expect(result.page.indexable).toBe(false);
     expect(result.page.follow).toBe(true);
     expect(result.html).toContain('<meta name="robots" content="noindex,follow');
-    const note = result.page.findings.find((f) => f.code === "indexability.excluded");
-    expect(note?.message).toContain("Later pages of a listing");
+    // Hidden on purpose, so there is nothing to report.
+    expect(codes(result)).not.toContain("indexability.excluded");
     // A page that is hidden on purpose is not asked for a better description.
     expect(codes(page("<p>Blog</p>", "/insights/page/2"))).not.toContain("description.short");
   });
@@ -93,9 +111,7 @@ describe("Pages kept out of search results", () => {
     const hidden = page(`<p>${sentence}</p>`, "/thank-you");
     expect(hidden.page.indexable).toBe(false);
     expect(hidden.html).toContain('content="noindex,follow');
-    expect(
-      hidden.page.findings.find((f) => f.code === "indexability.excluded")?.message,
-    ).toContain("after a form is sent");
+    expect(codes(hidden)).not.toContain("indexability.excluded");
     expect(page(`<p>${sentence}</p>`, "/contact/thanks").page.indexable).toBe(false);
     // Only the exact slug counts, never a page that merely mentions thanks.
     expect(page(`<p>${sentence}</p>`, "/thanksgiving-offers").page.indexable).toBe(true);

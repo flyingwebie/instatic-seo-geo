@@ -750,18 +750,15 @@ export function enrichPage(
       `Description is ${description.length} characters; search results usually cut it near 155.`,
       "Put the most important words first, or shorten it in Setup → Pages.",
     );
-  if (!indexable)
+  // A page hidden on purpose (automatically, or by choosing "do not index"
+  // in Setup) is not a finding. Only report exclusions that may be mistakes:
+  // robots markup on the page, a canonical elsewhere or an excluded path.
+  if (!indexable && !hiddenByDefault && authored.index !== false)
     finding(
       "indexability.excluded",
       "info",
-      hiddenByDefault
-        ? paginated
-          ? "Later pages of a listing are kept out of search results and the sitemap automatically; their links are still followed."
-          : "A page shown after a form is sent is kept out of search results and the sitemap automatically."
-        : "Page is excluded from canonical public exports.",
-      hiddenByDefault
-        ? "Nothing to do. To index this page anyway, turn indexing on for it in Setup → Pages."
-        : "Review robots controls, canonical URL, and excluded paths if exclusion is unintended.",
+      "Page is excluded from canonical public exports.",
+      "Review robots controls, canonical URL, and excluded paths if exclusion is unintended.",
     );
   if (elements(parsed.main, "instatic-hole").length)
     finding(
